@@ -23,7 +23,7 @@ class Node:
         Return a string representation of the node for printing.
         :return: The string representation of the node
         """
-        return f"ID {self.id}: {self.in_1}, {op_code_mapping[self.op_code]}, {self.in_2}"
+        return f"ID {self.id}: {self.in_1}, {opcode_to_str[self.op_code]}, {self.in_2}"
 
 class CGPCircuit:
     """
@@ -54,60 +54,61 @@ class CGPCircuit:
         elif file:
             self.load_from_file(file)
     
-    def forward(self, inputs: torch.Tensor, device: str = None):
-        if device is None:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"Using device: {device}")
-
+    def forward(self, inputs: torch.Tensor, device: str = "cpu"):
         if inputs.dtype != torch.bool:
             raise ValueError("Input tensor must be of type bool")
-        
         if inputs.shape[0] != self.prefix["c_in"]:
             raise ValueError(f"Number of inputs ({inputs.shape[0]}) does not match the number of inputs in the CGP circuit ({self.prefix["c_in"]})")
 
-        # Initialize the node values
-        node_values = torch.zeros(len(self.core), dtype=torch.bool)
+        total_len = 2 + self.prefix["c_in"] + len(self.core)
+        values = torch.empty(total_len, dtype=torch.bool, device=device)
 
-        # Move tensors to device
-        inputs = inputs.to(device)
-        node_values = node_values.to(device)
+        # Set implicit 0 and 1 as constants
+        values[0] = False
+        values[1] = True
 
-        return
+        # Load primary inputs starting from index 2
+        values[2:2 + self.prefix["c_in"]] = inputs
 
-        # Set the input values
-        for i in range(self.prefix["c_in"]):
-            node_values[i] = inputs[i]
-
-        # Evaluate the nodes
-        for i in range(self.prefix["c_in"], len(self.core)):
-            node = self.core[i]
-            in_1 = node_values[node.in_1]
-            in_2 = node_values[node.in_2]
-            op_code = node.op_code
-
-            if op_code == 0:
-                node_values[i] = in_1
-            elif op_code == 1:
-                node_values[i] = ~in_1
-            elif op_code == 2:
-                node_values[i] = in_1 & in_2
-            elif op_code == 3:
-                node_values[i] = in_1 | in_2
-            elif op_code == 4:
-                node_values[i] = in_1 ^ in_2
-            elif op_code == 5:
-                node_values[i] = ~(in_1 & in_2)
-            elif op_code == 6:
-                node_values[i] = ~(in_1 | in_2)
-            elif op_code == 7:
-                node_values[i] = ~(in_1 ^ in_2)
-            elif op_code == 8:
-                node_values[i] = True
-            elif op_code == 9:
-                node_values[i] = False
-
-        pass
+        for node in self.core:
+            in_1 = values[node.in_1]
+            in_2 = values[node.in_2]
+            result = opcode_to_func[node.op_code](in_1, in_2)
+            values[int(node.id)] = result
+        
+        final_output = values[torch.tensor(self.outputs, dtype=torch.long, device=device)]
+        return final_output
     
+    def forward_batch(self, inputs: torch.Tensor, device: str = "cuda"):
+        if inputs.dtype != torch.bool:
+            raise ValueError("Input tensor must be of type bool")
+        if inputs.shape[1] != self.prefix["c_in"]:
+            raise ValueError(f"Number of inputs ({inputs.shape[0]}) does not match the number of inputs in the CGP circuit ({self.prefix["c_in"]})")
+        if inputs.dim() != 2:
+            raise ValueError("Expected inputs to be a 2D tensor of shape (batch_size, c_in)")
+
+        total_length = 2 + self.prefix["c_in"] + len(self.core)
+        batch_size = inputs.shape[0]
+        
+        values = torch.empty((batch_size, total_length), dtype=torch.bool, device=device)
+        
+        # Set implicit 0 and 1 as constants
+        values[:, 0] = False
+        values[:, 1] = True
+        
+        # Load primary inputs starting from index 2
+        values[:, 2:2 + self.prefix["c_in"]] = inputs.to(device)
+        
+        for node in self.core:
+            a = values[:, node.in_1]
+            b = values[:, node.in_2]
+            result = opcode_to_func[node.op_code](a, b)
+            values[:, int(node.id)] = result
+
+        output_indices = torch.tensor(self.outputs, dtype=torch.long, device=device)
+        final_output = values[:, output_indices]
+        return final_output
+
     def load_from_string(self, cgp_string: str):
         """
         Load the CGP circuit from a string.
@@ -176,7 +177,7 @@ class CGPCircuit:
         return f"Prefix: {self.prefix}\nCore:\n{nodes_str}\nOutputs: {self.outputs}"
 
 # Mapping of operation codes to logical operations
-op_code_mapping = {
+opcode_to_str = {
     0: "IDENTITY",
     1: "NOT",
     2: "AND",
@@ -187,4 +188,17 @@ op_code_mapping = {
     7: "XNOR",
     8: "TRUE",
     9: "FALSE"
+}
+
+opcode_to_func = {
+    0: lambda a, b: a,                                                      # IDENTITY: returns the first input
+    1: lambda a, b: torch.logical_not(a),                                   # NOT: ignores b
+    2: lambda a, b: torch.logical_and(a, b),                                # AND
+    3: lambda a, b: torch.logical_or(a, b),                                 # OR
+    4: lambda a, b: torch.logical_xor(a, b),                                # XOR
+    5: lambda a, b: torch.logical_not(torch.logical_and(a, b)),             # NAND
+    6: lambda a, b: torch.logical_not(torch.logical_or(a, b)),              # NOR
+    7: lambda a, b: torch.logical_not(torch.logical_xor(a, b)),             # XNOR
+    8: lambda a, b: torch.tensor(True, dtype=torch.bool, device=a.device),  # TRUE constant
+    9: lambda a, b: torch.tensor(False, dtype=torch.bool, device=a.device)  # FALSE constant
 }
