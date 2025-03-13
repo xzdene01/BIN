@@ -1,6 +1,8 @@
 import re
 import torch
 
+from .mappings import opcode_to_str, opcode_to_func
+
 class Node:
     """
     Represents a node in the CGP circuit.
@@ -108,6 +110,37 @@ class CGPCircuit:
         output_indices = torch.tensor(self.outputs, dtype=torch.long, device=device)
         final_output = values[:, output_indices]
         return final_output
+    
+    @staticmethod
+    def forward_static_batch(inputs: torch.Tensor, c_in: int, cgp_core: list, cgp_out: list, device: str = "cuda"):
+        if inputs.dtype != torch.bool:
+            raise ValueError("Input tensor must be of type bool")
+        if inputs.shape[1] != c_in:
+            raise ValueError(f"Number of inputs ({inputs.shape[0]}) does not match the number of inputs in the CGP circuit ({c_in})")
+        if inputs.dim() != 2:
+            raise ValueError("Expected inputs to be a 2D tensor of shape (batch_size, c_in)")
+
+        total_length = 2 + c_in + len(cgp_core)
+        batch_size = inputs.shape[0]
+        
+        values = torch.empty((batch_size, total_length), dtype=torch.bool, device=device)
+        
+        # Set implicit 0 and 1 as constants
+        values[:, 0] = False
+        values[:, 1] = True
+        
+        # Load primary inputs starting from index 2
+        values[:, 2:2 + c_in] = inputs.to(device)
+        
+        for node in cgp_core:
+            a = values[:, node.in_1]
+            b = values[:, node.in_2]
+            result = opcode_to_func[node.op_code](a, b)
+            values[:, int(node.id)] = result
+
+        output_indices = torch.tensor(cgp_out, dtype=torch.long, device=device)
+        final_output = values[:, output_indices]
+        return final_output
 
     def load_from_string(self, cgp_string: str):
         """
@@ -175,30 +208,3 @@ class CGPCircuit:
         """
         nodes_str = "  " + "\n  ".join(str(node) for node in self.core)
         return f"Prefix: {self.prefix}\nCore:\n{nodes_str}\nOutputs: {self.outputs}"
-
-# Mapping of operation codes to logical operations
-opcode_to_str = {
-    0: "IDENTITY",
-    1: "NOT",
-    2: "AND",
-    3: "OR",
-    4: "XOR",
-    5: "NAND",
-    6: "NOR",
-    7: "XNOR",
-    8: "TRUE",
-    9: "FALSE"
-}
-
-opcode_to_func = {
-    0: lambda a, b: a,                                                      # IDENTITY: returns the first input
-    1: lambda a, b: torch.logical_not(a),                                   # NOT: ignores b
-    2: lambda a, b: torch.logical_and(a, b),                                # AND
-    3: lambda a, b: torch.logical_or(a, b),                                 # OR
-    4: lambda a, b: torch.logical_xor(a, b),                                # XOR
-    5: lambda a, b: torch.logical_not(torch.logical_and(a, b)),             # NAND
-    6: lambda a, b: torch.logical_not(torch.logical_or(a, b)),              # NOR
-    7: lambda a, b: torch.logical_not(torch.logical_xor(a, b)),             # XNOR
-    8: lambda a, b: torch.tensor(True, dtype=torch.bool, device=a.device),  # TRUE constant
-    9: lambda a, b: torch.tensor(False, dtype=torch.bool, device=a.device)  # FALSE constant
-}
