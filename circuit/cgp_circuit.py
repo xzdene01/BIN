@@ -3,29 +3,32 @@ import torch
 
 from .mappings import opcode_to_str, opcode_to_func
 
+
 class Node:
     """
     Represents a node in the CGP circuit.
     Each node has an ID, two inputs and an operation code, which can be than mapped to a logical operation.
     """
+
     def __init__(self, core):
         """
         Initialize a new node from the core string.
         :param core: The core string from the CGP circuit
         """
         self.id = core[0]
-        
+
         splitted = core[1].split(",")
         self.in_1 = int(splitted[0])
         self.in_2 = int(splitted[1])
         self.op_code = int(splitted[2])
-    
+
     def __str__(self):
         """
         Return a string representation of the node for printing.
         :return: The string representation of the node
         """
         return f"ID {self.id}: {self.in_1}, {opcode_to_str[self.op_code]}, {self.in_2}"
+
 
 class CGPCircuit:
     """
@@ -42,6 +45,7 @@ class CGPCircuit:
     The core is a list of nodes, where each node is represented by a Node object.
     The outputs is a list of integers representing the output.
     """
+
     def __init__(self, cgp_string: str = None, file: str = None):
         """
         Initialize a new CGP circuit.
@@ -55,7 +59,7 @@ class CGPCircuit:
             self.load_from_string(cgp_string)
         elif file:
             self.load_from_file(file)
-    
+
     def forward(self, inputs: torch.Tensor, device: str = "cpu"):
         if inputs.dtype != torch.bool:
             raise ValueError("Input tensor must be of type bool")
@@ -77,10 +81,10 @@ class CGPCircuit:
             in_2 = values[node.in_2]
             result = opcode_to_func[node.op_code](in_1, in_2)
             values[int(node.id)] = result
-        
+
         final_output = values[torch.tensor(self.outputs, dtype=torch.long, device=device)]
         return final_output
-    
+
     def forward_batch(self, inputs: torch.Tensor, device: str = "cuda"):
         if inputs.dtype != torch.bool:
             raise ValueError("Input tensor must be of type bool")
@@ -91,16 +95,16 @@ class CGPCircuit:
 
         total_length = 2 + self.prefix["c_in"] + len(self.core)
         batch_size = inputs.shape[0]
-        
+
         values = torch.empty((batch_size, total_length), dtype=torch.bool, device=device)
-        
+
         # Set implicit 0 and 1 as constants
         values[:, 0] = False
         values[:, 1] = True
-        
+
         # Load primary inputs starting from index 2
         values[:, 2:2 + self.prefix["c_in"]] = inputs.to(device)
-        
+
         for node in self.core:
             a = values[:, node.in_1]
             b = values[:, node.in_2]
@@ -110,7 +114,7 @@ class CGPCircuit:
         output_indices = torch.tensor(self.outputs, dtype=torch.long, device=device)
         final_output = values[:, output_indices]
         return final_output
-    
+
     @staticmethod
     def forward_static_batch(inputs: torch.Tensor, c_in: int, cgp_core: list, cgp_out: list, device: str = "cuda"):
         if inputs.dtype != torch.bool:
@@ -122,16 +126,16 @@ class CGPCircuit:
 
         total_length = 2 + c_in + len(cgp_core)
         batch_size = inputs.shape[0]
-        
+
         values = torch.empty((batch_size, total_length), dtype=torch.bool, device=device)
-        
+
         # Set implicit 0 and 1 as constants
         values[:, 0] = False
         values[:, 1] = True
-        
+
         # Load primary inputs starting from index 2
         values[:, 2:2 + c_in] = inputs.to(device)
-        
+
         for node in cgp_core:
             a = values[:, node.in_1]
             b = values[:, node.in_2]
@@ -141,6 +145,21 @@ class CGPCircuit:
         output_indices = torch.tensor(cgp_out, dtype=torch.long, device=device)
         final_output = values[:, output_indices]
         return final_output
+
+    def get_active_mask_self(self):
+        return CGPCircuit.get_active_mask(self.prefix["c_in"], self.core, self.outputs)
+
+    @staticmethod
+    def get_active_mask(c_in, core, outputs):
+        mask = torch.zeros(len(core))
+        for node in core:
+            mask[node.in_1 - c_in - 2] = True
+            mask[node.in_2 - c_in - 2] = True
+
+        for output in outputs:
+            mask[output - c_in - 2] = True
+
+        return mask
 
     def load_from_string(self, cgp_string: str):
         """
@@ -157,7 +176,7 @@ class CGPCircuit:
             raise ValueError("Only 2 inputs (per node) are supported")
         if c_no != 1:
             raise ValueError("Only 1 output (per node) is supported")
-        
+
         self.prefix = {
             "c_in": c_in,
             "c_out": c_out,
@@ -173,7 +192,7 @@ class CGPCircuit:
         for x in core:
             node = Node(x)
             self.core.append(node)
-        
+
         # Process outputs
         self.outputs = list(map(int, cgp_outputs.split(",")))
 
@@ -184,7 +203,7 @@ class CGPCircuit:
         """
         with open(file_path, "r") as file:
             file_content = file.read()
-        
+
         self.load_from_string(file_content)
 
     def save_to_file(self, file_path):
@@ -200,7 +219,7 @@ class CGPCircuit:
 
         with open(file_path, "w") as file:
             file.write(f"{prefix_str}{core_str}({outputs_str})")
-    
+
     def __str__(self):
         """
         Return a string representation of the CGP circuit for printing.

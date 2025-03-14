@@ -4,6 +4,7 @@ from circuit.cgp_circuit import CGPCircuit
 from utils import argparser
 from genetic.core import Population
 
+
 def main():
     args = argparser.parse_args()
 
@@ -24,14 +25,23 @@ def main():
     print(f"Total number of trials: {total_trials}")
     print(f"Total chunks: {total_chunks}")
 
+    print(f"Criterion: {args.criterion}")
+
+    # Get initial population
+    population = Population(args.population, args.mutation_rate, args.criterion, cgp)
     for i in range(args.epochs):
         print("=========================================")
         print(f"Epoch {i + 1}/{args.epochs}")
 
-        population = Population(args.population, 0.1, cgp)
-        fitnesses = population.get_fittness(batch_size, device)
+        # Recalculate fitnesses of the whole population
+        population.get_fittness(batch_size, device)
 
-        print(f"Best fitness: {max(fitnesses)}")
+        # Get best individual from population
+        best_cgp, best_area, best_error = population.get_best()
+        print("Best area:", best_area, ", Best error:", best_error)
+
+        # Mutate the whole population
+
 
 if __name__ == "__main__":
     main()
