@@ -49,6 +49,7 @@ class CGPCircuit:
     def __init__(self, cgp_string: str = None, file: str = None):
         """
         Initialize a new CGP circuit.
+        :param cgp_string: The string to load the CGP circuit from
         :param file: The file path to load the CGP circuit from
         """
         self.prefix = {}
@@ -61,12 +62,19 @@ class CGPCircuit:
             self.load_from_file(file)
 
     def forward(self, inputs: torch.Tensor, device: str = "cpu"):
+        return CGPCircuit.forward_static(inputs, self.prefix["c_in"], self.core, self.outputs, device)
+
+    def forward_batch(self, inputs: torch.Tensor, device: str = "cuda"):
+        return CGPCircuit.forward_static_batch(inputs, self.prefix["c_in"], self.core, self.outputs, device)
+    
+    @staticmethod
+    def forward_static(inputs: torch.Tensor, c_in: int, cgp_core: list, cgp_out: list, device: str = "cpu"):
         if inputs.dtype != torch.bool:
             raise ValueError("Input tensor must be of type bool")
-        if inputs.shape[0] != self.prefix["c_in"]:
-            raise ValueError(f"Number of inputs ({inputs.shape[0]}) does not match the number of inputs in the CGP circuit ({self.prefix["c_in"]})")
+        if inputs.shape[0] != c_in:
+            raise ValueError(f"Number of inputs ({inputs.shape[0]}) does not match the number of inputs in the CGP circuit ({c_in})")
 
-        total_len = 2 + self.prefix["c_in"] + len(self.core)
+        total_len = 2 + c_in + len(cgp_core)
         values = torch.empty(total_len, dtype=torch.bool, device=device)
 
         # Set implicit 0 and 1 as constants
@@ -74,45 +82,15 @@ class CGPCircuit:
         values[1] = True
 
         # Load primary inputs starting from index 2
-        values[2:2 + self.prefix["c_in"]] = inputs
+        values[2:2 + c_in] = inputs
 
-        for node in self.core:
+        for node in cgp_core:
             in_1 = values[node.in_1]
             in_2 = values[node.in_2]
             result = opcode_to_func[node.op_code](in_1, in_2)
             values[int(node.id)] = result
 
-        final_output = values[torch.tensor(self.outputs, dtype=torch.long, device=device)]
-        return final_output
-
-    def forward_batch(self, inputs: torch.Tensor, device: str = "cuda"):
-        if inputs.dtype != torch.bool:
-            raise ValueError("Input tensor must be of type bool")
-        if inputs.shape[1] != self.prefix["c_in"]:
-            raise ValueError(f"Number of inputs ({inputs.shape[0]}) does not match the number of inputs in the CGP circuit ({self.prefix["c_in"]})")
-        if inputs.dim() != 2:
-            raise ValueError("Expected inputs to be a 2D tensor of shape (batch_size, c_in)")
-
-        total_length = 2 + self.prefix["c_in"] + len(self.core)
-        batch_size = inputs.shape[0]
-
-        values = torch.empty((batch_size, total_length), dtype=torch.bool, device=device)
-
-        # Set implicit 0 and 1 as constants
-        values[:, 0] = False
-        values[:, 1] = True
-
-        # Load primary inputs starting from index 2
-        values[:, 2:2 + self.prefix["c_in"]] = inputs.to(device)
-
-        for node in self.core:
-            a = values[:, node.in_1]
-            b = values[:, node.in_2]
-            result = opcode_to_func[node.op_code](a, b)
-            values[:, int(node.id)] = result
-
-        output_indices = torch.tensor(self.outputs, dtype=torch.long, device=device)
-        final_output = values[:, output_indices]
+        final_output = values[torch.tensor(cgp_out, dtype=torch.long, device=device)]
         return final_output
 
     @staticmethod
@@ -146,11 +124,11 @@ class CGPCircuit:
         final_output = values[:, output_indices]
         return final_output
 
-    def get_active_mask_self(self):
-        return CGPCircuit.get_active_mask(self.prefix["c_in"], self.core, self.outputs)
+    def get_active_mask(self):
+        return CGPCircuit.get_active_mask_static(self.prefix["c_in"], self.core, self.outputs)
 
     @staticmethod
-    def get_active_mask(c_in, core, outputs):
+    def get_active_mask_static(c_in, core, outputs):
         mask = torch.zeros(len(core))
         for node in core:
             mask[node.in_1 - c_in - 2] = True

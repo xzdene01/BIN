@@ -21,14 +21,19 @@ def main():
     batch_size = 2 ** args.batch_size
     total_trials = int(2 ** (2 * in_bits))
     total_chunks = max(1, total_trials // batch_size)
-    print(f"Batch size: {batch_size}")
-    print(f"Total number of trials: {total_trials}")
-    print(f"Total chunks: {total_chunks}")
+    print(f"Batch size: {batch_size}", end=", ")
+    print(f"Trials: {total_trials}", end=", ")
+    print(f"Chunks: {total_chunks}")
 
     print(f"Criterion: {args.criterion}")
 
+    mask = cgp.get_active_mask()
+    print("Active nodes:", int(mask.sum().item()))
+
     # Get initial population
-    population = Population(args.population, args.mutation_rate, args.criterion, cgp)
+    population = Population(args.population, args.mutation_rate, args.criterion, cgp, mutate=True)
+
+    # Run evolution
     for i in range(args.epochs):
         print("=========================================")
         print(f"Epoch {i + 1}/{args.epochs}")
@@ -37,10 +42,11 @@ def main():
         population.get_fittness(batch_size, device)
 
         # Get best individual from population
-        best_cgp, best_area, best_error = population.get_best()
+        best_individual, best_area, best_error = population.get_best()
         print("Best area:", best_area, ", Best error:", best_error)
 
-        # Mutate the whole population
+        # Init new population
+        population.populate(best_individual, mutate=True)
 
 
 if __name__ == "__main__":
