@@ -64,11 +64,40 @@ class CGPCircuit:
     def forward(self, inputs: torch.Tensor, device: str = "cpu"):
         return CGPCircuit.forward_static(inputs, self.prefix["c_in"], self.core, self.outputs, device)
 
-    def forward_batch(self, inputs: torch.Tensor, device: str = "cuda"):
-        return CGPCircuit.forward_static_batch(inputs, self.prefix["c_in"], self.core, self.outputs, device)
+    def forward_batch(self, inputs: torch.Tensor, device: str):
+        c_in = self.prefix["c_in"]
+
+        if inputs.dtype != torch.bool:
+            raise ValueError("Input tensor must be of type bool")
+        if inputs.shape[1] != c_in:
+            raise ValueError(f"Number of inputs ({inputs.shape[0]}) does not match the number of inputs in the CGP circuit ({c_in})")
+        if inputs.dim() != 2:
+            raise ValueError("Expected inputs to be a 2D tensor of shape (batch_size, c_in)")
+
+        total_length = 2 + c_in + len(self.core)
+        batch_size = inputs.shape[0]
+
+        values = torch.zeros((batch_size, total_length), dtype=torch.bool, device=device)
+
+        # Set implicit 0 and 1 as constants
+        values[:, 0] = False
+        values[:, 1] = True
+
+        # Load primary inputs starting from index 2
+        values[:, 2:2 + c_in] = inputs
+
+        for node in self.core:
+            a = values[:, node.in_1]
+            b = values[:, node.in_2]
+            result = opcode_to_func[node.op_code](a, b)
+            values[:, int(node.id)] = result
+
+        output_indices = torch.tensor(self.outputs, dtype=torch.long, device=device)
+        final_output = values[:, output_indices]
+        return final_output
     
     @staticmethod
-    def forward_static(inputs: torch.Tensor, c_in: int, cgp_core: list, cgp_out: list, device: str = "cpu"):
+    def forward_static(inputs: torch.Tensor, c_in: int, cgp_core: list, cgp_out: list, device: str):
         if inputs.dtype != torch.bool:
             raise ValueError("Input tensor must be of type bool")
         if inputs.shape[0] != c_in:
@@ -93,39 +122,22 @@ class CGPCircuit:
         final_output = values[torch.tensor(cgp_out, dtype=torch.long, device=device)]
         return final_output
 
-    @staticmethod
-    def forward_static_batch(inputs: torch.Tensor, c_in: int, cgp_core: list, cgp_out: list, device: str = "cuda"):
-        if inputs.dtype != torch.bool:
-            raise ValueError("Input tensor must be of type bool")
-        if inputs.shape[1] != c_in:
-            raise ValueError(f"Number of inputs ({inputs.shape[0]}) does not match the number of inputs in the CGP circuit ({c_in})")
-        if inputs.dim() != 2:
-            raise ValueError("Expected inputs to be a 2D tensor of shape (batch_size, c_in)")
-
-        total_length = 2 + c_in + len(cgp_core)
-        batch_size = inputs.shape[0]
-
-        values = torch.empty((batch_size, total_length), dtype=torch.bool, device=device)
-
-        # Set implicit 0 and 1 as constants
-        values[:, 0] = False
-        values[:, 1] = True
-
-        # Load primary inputs starting from index 2
-        values[:, 2:2 + c_in] = inputs.to(device)
-
-        for node in cgp_core:
-            a = values[:, node.in_1]
-            b = values[:, node.in_2]
-            result = opcode_to_func[node.op_code](a, b)
-            values[:, int(node.id)] = result
-
-        output_indices = torch.tensor(cgp_out, dtype=torch.long, device=device)
-        final_output = values[:, output_indices]
-        return final_output
-
     def get_active_mask(self):
-        return CGPCircuit.get_active_mask_static(self.prefix["c_in"], self.core, self.outputs)
+        mask = torch.zeros(len(self.core))
+        for node in self.core:
+            mask[node.in_1 - self.prefix["c_in"] - 2] = True
+            mask[node.in_2 - self.prefix["c_in"] - 2] = True
+
+        for output in self.outputs:
+            mask[output - self.prefix["c_in"] - 2] = True
+        
+        return mask
+    
+    def get_active_idxs(self):
+        return torch.nonzero(self.get_active_mask()).flatten()
+    
+    def __len__(self):
+        return int(self.get_active_mask().sum().item())
 
     @staticmethod
     def get_active_mask_static(c_in, core, outputs):

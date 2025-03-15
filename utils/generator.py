@@ -7,11 +7,11 @@ from utils import convert
 # Vectorized implementation #
 #############################
 
-def generate_all_vec(bits: int, chunk_size: int, device: str = "cuda"):
+def generate_all_vec(bits: int, chunk_size: int, device: str = "cpu"):
     """
     Generates all possible combinations of inputs and outputs for the multiplication operation.
     The inputs and outputs are represented as binary tensors.
-    The function is optimized for vectorized operations.
+    
     :param bits: The number of bits to represent each input
     :param chunk_size: The size of the chunk for vectorized operations
     :param device: The device to use for the tensors
