@@ -17,5 +17,5 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("-b", "--batch_size", type=int, default=16, help="The batch size used during generation and inference, will be converted to 2 ** batch_size (default: 16).")
     parser.add_argument("-d", "--device", type=str, choices=["cpu", "cuda"], default=None, help="The device to use during inference (if not provided cuda will be tried).")
 
-    parser.add_argument("--log", action="store_true", help="Whether to log plots into files (default: False).")
+    parser.add_argument("--log", type=str, default=None, help="Folder to where store logs (default: None).")
     return parser.parse_args()

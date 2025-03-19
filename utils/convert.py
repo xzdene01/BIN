@@ -8,7 +8,9 @@ def uint_to_binary_tensor_vec(nums: torch.Tensor, bits: int) -> torch.Tensor:
     """
     Converts a tensor of unsigned integers to a binary tensor representation.
     The tensor is expected to be of shape (N,) where N is the number of integers.
-    The resulting tensor will have shape (N, bits) where each row is the binary representation of the corresponding integer.
+    The resulting tensor will have shape (N, bits) where each row is the binary representation of the corresponding
+    integer.
+
     :param nums: A tensor of unsigned integers
     :param bits: The number of bits to represent each integer
     :return: A binary tensor representation of the input tensor
@@ -24,6 +26,7 @@ def uint_to_binary_tensor_vec(nums: torch.Tensor, bits: int) -> torch.Tensor:
 def uint_to_binary_tensor(num: int, bits: int) -> torch.Tensor:
     """
     Converts an unsigned integer to a binary tensor representation.
+
     :param num: The unsigned integer
     :param bits: The number of bits to represent the integer
     :return: A binary tensor representation of the input integer
@@ -45,6 +48,7 @@ def uint_to_binary_tensor(num: int, bits: int) -> torch.Tensor:
 def binary_tensor_to_uint(tensor: torch.Tensor) -> int:
     """"
     Converts a binary tensor to an unsigned integer.
+    
     :param tensor: A binary tensor
     :return: The unsigned integer representation of the input tensor
     """
