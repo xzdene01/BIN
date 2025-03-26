@@ -1,3 +1,14 @@
+"""
+@file   cgp_circuit.py
+@brief  Represents a CGP circuit. The circuit consists of a prefix, core and outputs.
+@author Jan Zdeněk (xzdene01)
+@date   26/3/2025
+
+@project Aproximace násobiček pomocí CGP
+@course  BIN - Biologií inspirované počítače
+@faculty Faculty of Information Technology, Brno University of Technology
+"""
+
 import re
 import torch
 
@@ -12,9 +23,9 @@ class Node:
 
     def __init__(self, core):
         """
-        Initialize a new node from the core string.
+        Initialize a new node from core string.
 
-        :param core: The core string from the CGP circuit
+        :param core: Core string from CGP circuit
         """
         self.id = int(core[0])
 
@@ -25,17 +36,17 @@ class Node:
     
     def __str__(self):
         """
-        Get the string representation of the node.
+        Get string representation of this node.
 
-        :return: The string representation of the node
+        :return: String representation of this node
         """
         return f"([{self.id + 10}]{self.in_1},{self.in_2},{self.op_code})"
 
     def get_str_human(self):
         """
-        Return a string representation of the node for printing to console (human readable).
+        Get a string representation of the node for printing to console (human readable).
 
-        :return: The string representation of the node
+        :return: A string representation of the node
         """
         return f"ID {self.id}: {self.in_1}, {opcode_to_str[self.op_code]}, {self.in_2}"
 
@@ -53,14 +64,18 @@ class CGPCircuit:
     - c_lback:  Number of columns back (l-back parameter)
     The core is a list of nodes, where each node is represented by a Node object.
     The outputs is a list of integers representing the output.
+
+    !!! This implementation supports only flat circuits with 2 inputs per node. !!!
+    All nodes are processed sequentially - the order of nodes in the core list is important.
+    There are NO OPTIMIZATIONS for circuits with more rows - will work but slower.
     """
 
     def __init__(self, cgp_string: str = None, file: str = None):
         """
         Initialize a new CGP circuit.
 
-        :param cgp_string: The string to load the CGP circuit from
-        :param file: The file path to load the CGP circuit from
+        :param cgp_string: A string to load the CGP circuit from
+        :param file: File path to load the CGP circuit from
         """
         self.prefix = {}
         self.core = []
@@ -75,7 +90,7 @@ class CGPCircuit:
 
     def forward(self, inputs: torch.Tensor, device: str) -> torch.Tensor:
         """
-        Forward the inputs through the CGP circuit.
+        Forward the inputs through this CGP circuit.
 
         :param inputs: The input tensor
         :param device: The device to use
@@ -83,23 +98,21 @@ class CGPCircuit:
         """
         c_in = self.prefix["c_in"]
 
-        if inputs.dtype != torch.bool:
-            raise ValueError("Input tensor must be of type bool")
         if inputs.shape[0] != c_in:
-            raise ValueError(f"Number of inputs ({inputs.shape[0]}) does not match the number of inputs in the CGP \
-                             circuit ({c_in})")
+            raise ValueError(f"Number of inputs ({inputs.shape[0]}) does not match this CGP circuit ({c_in}).")
 
+        # Const 0 and 1 + inputs + core
         total_len = 2 + c_in + len(self.core)
         values = torch.empty(total_len, dtype=torch.bool, device=device)
 
-        # Set implicit 0 and 1 as constants
+        # Set first 2 values as implicit 0 and 1
         values[0] = False
         values[1] = True
 
         # Load primary inputs starting from index 2
         values[2:2 + c_in] = inputs
 
-        # Process each node in sequence
+        # Process each node in sequence (flat circuit)
         for node in self.core:
             in_1 = values[node.in_1]
             in_2 = values[node.in_2]
@@ -119,11 +132,8 @@ class CGPCircuit:
         """
         c_in = self.prefix["c_in"]
 
-        if inputs.dtype != torch.bool:
-            raise ValueError("Input tensor must be of type bool")
         if inputs.shape[1] != c_in:
-            raise ValueError(f"Number of inputs ({inputs.shape[0]}) does not match the number of \
-                             inputs in the CGP circuit ({c_in})")
+            raise ValueError(f"Number of inputs ({inputs.shape[0]}) does not match this CGP circuit ({c_in}).")
         if inputs.dim() != 2:
             raise ValueError("Expected inputs to be a 2D tensor of shape (batch_size, c_in)")
 

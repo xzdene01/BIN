@@ -1,3 +1,14 @@
+"""
+@file   mappings.py
+@brief  Contains mappings of opcodes (INT) to their string representation and logical function.
+@author Jan Zdeněk (xzdene01)
+@date   26/3/2025
+
+@project Aproximace násobiček pomocí CGP
+@course  BIN - Biologií inspirované počítače
+@faculty Faculty of Information Technology, Brno University of Technology
+"""
+
 import torch
 
 # Mapping of operation codes to their string representation

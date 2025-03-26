@@ -1,12 +1,31 @@
+"""
+@file   core.py
+@brief  Contains the Population class for the genetic algorithm with all necessary methods like:
+        - initialization of the population
+        - mutation of the population
+        - calculation of fitnesses
+        - error calculation
+@author Jan Zdeněk (xzdene01)
+@date   26/3/2025
+
+@project Aproximace násobiček pomocí CGP
+@course  BIN - Biologií inspirované počítače
+@faculty Faculty of Information Technology, Brno University of Technology
+"""
+
 import torch
-import tqdm
 import copy
 
 from circuit.cgp_circuit import CGPCircuit, opcode_to_str
 from utils import generator
 from utils.maybe_tqdm import maybe_tqdm
+from .mappings import fitness_functions
 
 class Individual:
+    """
+    Represents an individual in the population. Is used ONLY for returning the best individual from the population.
+    """
+
     def __init__(self, cgp: CGPCircuit, area: int, error: float, fitness: float):
         self.cgp = cgp
         self.area = area
@@ -96,8 +115,7 @@ class Population:
 
         :param m_rate: The mutation rate to use (if None, the default mutation rate is used)
         """
-        # You can use a custom mutation rate for this population
-        # !!! Does not save the mutation rate
+        # !!! Does not save the mutation rate into attribute, that must be done manualy
         if not m_rate:
             m_rate = self.m_rate
 
@@ -114,14 +132,18 @@ class Population:
             # Choose random outputs and mutate
             num_mutations = min(int(m_rate * len(individual.outputs)), len(individual.outputs))
 
-            # It can happen that there are no mutations, in that case we need to go stochastic
-            if num_mutations == 0 and torch.rand(1).item() < m_rate:
-                num_mutations = 1 # Do at least one mutation on output
+            if num_mutations > 0:
+                weights = torch.ones(len(individual.outputs), device=self.device)
+                mutation_idxs = torch.multinomial(weights, num_mutations, replacement=False)
+            
+            # If num of mutations is 0, we need to go stochastic
             else:
-                continue # Dont mutate outputs
+                mutation_idxs = []
+                for i in range(len(individual.outputs)):
+                    if torch.rand(1).item() < m_rate:
+                        mutation_idxs.append(i)
+                mutation_idxs = torch.tensor(mutation_idxs, device=self.device)
 
-            weights = torch.ones(len(individual.outputs), device=self.device)
-            mutation_idxs = torch.multinomial(weights, num_mutations, replacement=False)
             self.mutate_outputs(individual, mutation_idxs)
     
     def mutate_core(self, individual: CGPCircuit, mutation_indices: torch.Tensor):
@@ -176,15 +198,6 @@ class Population:
         self.best_error = self.errors[best_idx].item()
         self.best_fitness = self.fitnesses[best_idx].item()
 
-        if self.criterion == "area" and self.best_error > self.tau:
-            print("Parent:", self.errors[0].item(), self.get_error(self.population[0]))
-            print("Best:", self.best_error, self.get_error(self.population[best_idx]))
-            raise ValueError("Best individual has fitness higher than tau. This should not happen.")
-        elif self.criterion == "error" and self.best_area > self.tau:
-            print("Parent:", self.areas[0].item(), len(self.population[0]))
-            print("Best:", self.best_area, len(self.population[best_idx]))
-            raise ValueError("Best individual has area higher than tau. This should not happen.")
-
         return self.fitnesses
     
     def get_error(self, individual: CGPCircuit) -> float:
@@ -224,6 +237,7 @@ class Population:
         b_val_all, _ = torch.min(self.fitnesses, dim=0)
         b_val_tail, b_idx_tail = torch.min(self.fitnesses[1:], dim=0)
         best_idx = 0 if b_val_all < b_val_tail else b_idx_tail + 1
+        
         self.best = copy.deepcopy(self.population[best_idx])
         self.best_area = int(self.areas[best_idx].item())
         self.best_error = self.errors[best_idx].item()
@@ -273,17 +287,3 @@ class Population:
         :return: The best individual
         """
         return Individual(self.best, self.best_area, self.best_error, self.best_fitness)
-
-
-fitness_functions = {
-    "area": lambda areas, errs, tau: torch.where(
-        errs <= tau,
-        areas,
-        torch.full_like(areas, float("inf"))
-    ),
-    "error": lambda areas, errs, tau: torch.where(
-        areas <= tau,
-        errs,
-        torch.full_like(errs, float("inf"))
-    )
-}

@@ -1,3 +1,15 @@
+"""
+@file   stats_logger.py
+@brief  Logger for logging statistics of the training process.
+        This is more of a helper class with 0 effect on the actual training process.
+@author Jan Zdeněk (xzdene01)
+@date   26/3/2025
+
+@project Aproximace násobiček pomocí CGP
+@course  BIN - Biologií inspirované počítače
+@faculty Faculty of Information Technology, Brno University of Technology
+"""
+
 import os
 import json
 from datetime import datetime
@@ -73,7 +85,10 @@ class StatsLogger:
             os.makedirs(self.log_dir, exist_ok=True)
             plt.savefig(os.path.join(self.log_dir, "scatter.png"))
         else:
-            plt.show()
+            try:
+                plt.show()
+            except Exception:
+                print("Cannot show plot. Save it instead with --log flag.")
 
     def plot(self, save=False):
         plt.figure()
@@ -120,7 +135,10 @@ class StatsLogger:
             os.makedirs(self.log_dir, exist_ok=True)
             plt.savefig(os.path.join(self.log_dir, "areas_errors.png"))
         else:
-            plt.show()
+            try:
+                plt.show()
+            except Exception:
+                print("Cannot show plot. Save it instead with --log flag.")
     
     def save_logs(self, cgp: str = None):
         os.makedirs(self.log_dir, exist_ok=True)

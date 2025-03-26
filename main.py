@@ -1,3 +1,14 @@
+"""
+@file   main.py
+@brief  Main file for running the evolution process. This file is the entry point of the program.
+@author Jan Zdeněk (xzdene01)
+@date   26/3/2025
+
+@project Aproximace násobiček pomocí CGP
+@course  BIN - Biologií inspirované počítače
+@faculty Faculty of Information Technology, Brno University of Technology
+"""
+
 import torch
 
 from circuit.cgp_circuit import CGPCircuit

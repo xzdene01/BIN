@@ -1,3 +1,14 @@
+"""
+@file   argparser.py
+@brief  Parsing of command line arguments.
+@author Jan Zdeněk (xzdene01)
+@date   26/3/2025
+
+@project Aproximace násobiček pomocí CGP
+@course  BIN - Biologií inspirované počítače
+@faculty Faculty of Information Technology, Brno University of Technology
+"""
+
 import argparse
 
 

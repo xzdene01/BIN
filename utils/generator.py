@@ -1,3 +1,14 @@
+"""
+@file   generator.py
+@brief  Functions for generating all possible combinations of inputs and outputs.
+@author Jan Zdeněk (xzdene01)
+@date   26/3/2025
+
+@project Aproximace násobiček pomocí CGP
+@course  BIN - Biologií inspirované počítače
+@faculty Faculty of Information Technology, Brno University of Technology
+"""
+
 import torch
 import tqdm
 
