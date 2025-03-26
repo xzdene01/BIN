@@ -21,6 +21,7 @@ from utils import generator
 from utils.maybe_tqdm import maybe_tqdm
 from .mappings import fitness_functions
 
+
 class Individual:
     """
     Represents an individual in the population. Is used ONLY for returning the best individual from the population.
@@ -103,7 +104,7 @@ class Population:
         # Mutate the new population
         if do_mut:
             self.mutate()
-        
+
         # Reset all tensors, they are not valid in this new population
         self.areas = torch.empty(self.size, device=self.device)
         self.errors = torch.empty(self.size, device=self.device)
@@ -135,7 +136,7 @@ class Population:
             if num_mutations > 0:
                 weights = torch.ones(len(individual.outputs), device=self.device)
                 mutation_idxs = torch.multinomial(weights, num_mutations, replacement=False)
-            
+
             # If num of mutations is 0, we need to go stochastic
             else:
                 mutation_idxs = []
@@ -145,7 +146,7 @@ class Population:
                 mutation_idxs = torch.tensor(mutation_idxs, device=self.device)
 
             self.mutate_outputs(individual, mutation_idxs)
-    
+
     def mutate_core(self, individual: CGPCircuit, mutation_indices: torch.Tensor):
         """
         Mutate the core of the individual.
@@ -199,7 +200,7 @@ class Population:
         self.best_fitness = self.fitnesses[best_idx].item()
 
         return self.fitnesses
-    
+
     def get_error(self, individual: CGPCircuit) -> float:
         """
         Get the error of the individual.
@@ -237,14 +238,14 @@ class Population:
         b_val_all, _ = torch.min(self.fitnesses, dim=0)
         b_val_tail, b_idx_tail = torch.min(self.fitnesses[1:], dim=0)
         best_idx = 0 if b_val_all < b_val_tail else b_idx_tail + 1
-        
+
         self.best = copy.deepcopy(self.population[best_idx])
         self.best_area = int(self.areas[best_idx].item())
         self.best_error = self.errors[best_idx].item()
         self.best_fitness = self.fitnesses[best_idx].item()
 
         return self.fitnesses
-    
+
     def get_error_vec(self, individuals: list[CGPCircuit] = None) -> torch.Tensor:
         """
         Get the error of the individuals in the population using vectorized operations.
@@ -254,7 +255,7 @@ class Population:
         """
         if not individuals:
             individuals = self.population
-        
+
         N = len(individuals)
         in_bits = int(self.c_in / self.c_ni)
         total_bits = (2 ** self.c_in) * self.c_in
@@ -276,7 +277,7 @@ class Population:
             ref_flat = ref.flatten().unsqueeze(0).expand(N, -1)
 
             errors += torch.sum(out_flat ^ ref_flat, dim=1).float()
-        
+
         avg_errors = (errors / total_bits) * 100
         return avg_errors
 

@@ -33,7 +33,7 @@ class Node:
         self.in_1 = int(splitted[0])
         self.in_2 = int(splitted[1])
         self.op_code = int(splitted[2])
-    
+
     def __str__(self):
         """
         Get string representation of this node.
@@ -174,9 +174,9 @@ class CGPCircuit:
 
         for output in self.outputs:
             mask[output - self.prefix["c_in"] - 2] = True
-        
+
         return mask
-    
+
     def get_active_idxs(self, device: str) -> torch.Tensor:
         """
         Get the indices of active nodes in the CGP circuit.
@@ -185,7 +185,7 @@ class CGPCircuit:
         :return: The indices of active nodes
         """
         return torch.nonzero(self.get_active_mask(device=device)).flatten()
-    
+
     def __len__(self):
         """
         Return the number of active nodes in the CGP circuit.
@@ -251,21 +251,21 @@ class CGPCircuit:
         """
         with open(file_path, "w") as file:
             file.write(str(self))
-    
+
     def __str__(self):
         """
         Get the string representation of the CGP circuit.
 
         :return: The string representation of the CGP circuit
         """
-        prefix_str = "{" + f"{self.prefix["c_in"]},{self.prefix["c_out"]},{self.prefix["c_rows"]},{ \
+        prefix_str = "{" + f"{self.prefix["c_in"]},{self.prefix["c_out"]},{self.prefix["c_rows"]},{
             len(self)},{self.prefix["c_ni"]},{self.prefix["c_no"]},{self.prefix["c_lback"]}" + "}"
-        
+
         core_str = ""
         active_core = [n for i, n in enumerate(self.core) if i in self.get_active_idxs(device="cpu")]
         for i, node in enumerate(active_core):
             core_str += f"([{i + self.prefix["c_in"] + 2}]{node.in_1},{node.in_2},{node.op_code})"
-        
+
         outputs_str = ",".join(map(str, self.outputs))
 
         return f"{prefix_str}{core_str}({outputs_str})"
