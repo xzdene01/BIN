@@ -128,11 +128,11 @@ class Population:
         for individual in self.population[1:]:
 
             # Choose random nodes from active one and mutate
-            active_idxs = individual.get_active_idxs(device=self.device)
-            num_mutations = min(int(m_rate * len(active_idxs)), len(active_idxs))
-            weights = torch.ones(len(active_idxs), device=self.device)
+            idxs = torch.arange(len(individual.core), device=self.device)
+            num_mutations = min(int(m_rate * len(idxs)), len(idxs))
+            weights = torch.ones(len(idxs), device=self.device)
             mutation_idxs = torch.multinomial(weights, num_mutations, replacement=False)
-            self.mutate_core(individual, active_idxs[mutation_idxs])
+            self.mutate_core(individual, idxs[mutation_idxs])
 
             # Choose random outputs and mutate
             num_mutations = min(int(m_rate * len(individual.outputs)), len(individual.outputs))

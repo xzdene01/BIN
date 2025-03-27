@@ -22,7 +22,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("-m", "--mutation_rate", type=float, default=0.03, help="Mutation rate to be used in evolution (default: 0.03).")
     parser.add_argument("-t", "--tau", type=float, default=10, help="Tau value (max error/area) to be used (default: 10).")
 
-    parser.add_argument("--pretrain", type=int, help="For how long to pretrain the initial population [use this for optimizing error], if 0 is selected this part will run without limit (default: None).")
+    parser.add_argument("--pretrain", type=int, help="For how long to pretrain the initial population [use this for optimizing error] (default: None).")
     parser.add_argument("--finetune", type=int, help="For how long to finetune the best individual found (default: None).")
 
     parser.add_argument("-b", "--batch_size", type=int, default=16, help="The batch size used during generation and inference, will be converted to 2 ** batch_size (default: 16).")
