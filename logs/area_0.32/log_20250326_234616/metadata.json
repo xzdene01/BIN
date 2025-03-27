@@ -1,0 +1,15 @@
+{
+    "file": "generated/u_arrmul4.cgp",
+    "criterion": "area",
+    "population": 10,
+    "epochs": 5000,
+    "mutation_rate": 0.03,
+    "tau": 0.32,
+    "pretrain": null,
+    "finetune": null,
+    "batch_size": 16,
+    "device": "cpu",
+    "log": "logs/area_0.32",
+    "best_area": 59,
+    "best_error": 0.3125
+}
