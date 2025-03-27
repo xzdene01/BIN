@@ -1,92 +1,67 @@
+"""
+@file   collect.py
+@brief  Collect stats from CGP circuit optimizations and save them all to a CSV file.
+@author Jan Zdeněk (xzdene01)
+@date   27/3/2025
+
+@project Aproximace násobiček pomocí CGP
+@course  BIN - Biologií inspirované počítače
+@faculty Faculty of Information Technology, Brno University of Technology
+"""
+
 import os
 import json
 import argparse
-import numpy as np
-from matplotlib import pyplot as plt
+import pandas as pd
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Collect and plot stats from CGP circuit optimizations.")
-
-    parser.add_argument("-d", "--dir", type=str, default="logs", help="The directory with the logs to collect stats from (default: logs).")
-    parser.add_argument("-c", "--criterion", type=str, default="area", choices=["area", "error"], help="The criterion to collect stats for (default: area).")
-    parser.add_argument("-o", "--output", type=str, default=None, help="The output file to save the plot to (default: None).")
-
+    parser.add_argument("-s", "--source_dir", type=str, required=True, help="The directory with the logs to collect stats from.")
+    parser.add_argument("-o", "--output_dir", type=str, required=True, help="The directory to save the stats to.")
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
 
-    sec_criterion = "error" if args.criterion == "area" else "area"
+    os.makedirs(args.output_dir, exist_ok=True)
 
-    stats = {}
-    taus = []
-    best_areas = []
-    print(f"Collecting AREA optimization stats for {sec_criterion}s:", end=" ")
-    for folder in os.listdir(args.dir):
-        if args.criterion not in folder:
-            continue
+    # Find all metadata files in log directory
+    metadata_files = []
+    for root, _, files in os.walk(args.source_dir):
+        for file in files:
+            if file == "metadata.json":
+                metadata_files.append(os.path.join(root, file))
+    print("Found", len(metadata_files), "metadata files.")
+
+    # Read all metadata files
+    df = pd.DataFrame()
+    for metadata_file in metadata_files:
+        with open(metadata_file, "r") as f:
+            metadata = json.load(f)
         
-        tau = float(folder.split("_")[1])
-        taus.append(tau)
-        stats[tau] = []
-        print(f"[{tau}]", end=" ")
+        new_row = {
+            "log_file": metadata_file,
+            "src_file": os.path.basename(metadata["file"]),
+            "criterion": metadata["criterion"],
+            "population": metadata["population"],
+            "generations": metadata["epochs"],
+            "mut_raate": metadata["mutation_rate"],
+            "tau": metadata["tau"],
+            "pretrain": metadata["pretrain"],
+            "finetune": metadata["finetune"],
+            "best_area": metadata["best_area"],
+            "best_error": metadata["best_error"],
+            "run_log": os.path.join(os.path.dirname(metadata_file), "log.csv"),
+        }
 
-        best_area = None
-        for sub_folder in os.listdir(os.path.join(args.dir, folder)):
-            with open(os.path.join(args.dir, folder, sub_folder, "metadata.json"), "r") as f:
-                stats[tau].append(json.load(f))
-            area = stats[tau][-1]["best_area"]
-            error = stats[tau][-1]["best_error"]
-            if best_area is None or area < best_area[0]:
-                best_area = (area, error)
-        best_areas.append(best_area)
-    print()
+        new_row = pd.DataFrame([new_row])
+        df = pd.concat([df, new_row], ignore_index=True)
 
-    plt.figure()
-    errors = [stat["best_error"] for tau in stats for stat in stats[tau]]
-    areas = [stat["best_area"] for tau in stats for stat in stats[tau]]
-
-    # Plot lower bounds for each tau
-    best_areas = sorted(best_areas, key=lambda x: x[0])
-    best_as = [best_area[0] for best_area in best_areas]
-    best_es = [best_area[1] for best_area in best_areas]
-    plt.plot(best_es, best_as, "--", color="lightblue", label="Lower area bound")
-
-    # Show constraints
-    alpha = 0.4
-    if args.criterion == "area":
-        for tau in taus:
-            plt.axvline(x=tau, color=(1, 0, 0, alpha), linestyle="--")
-    else:
-        for tau in taus:
-            plt.axhline(y=tau, color=(1, 0, 0, alpha), linestyle="--")
-    
-    # Plot trendline/approximation
-    coefs = np.polyfit(errors, areas, 2)
-    trendline = np.poly1d(coefs)
-    x_fit = np.linspace(min(errors), max(errors), 100)
-    y_fit = trendline(x_fit)
-    plt.plot(x_fit, y_fit, "--", color="green", label=f"Trendline: {coefs[0]:.2f}x + {coefs[1]:.2f}")
-
-
-    plt.xlabel("Error")
-    plt.ylabel("Area")
-    plt.title(f"Error vs. Area (with different tau/{sec_criterion} values)")
-    plt.grid()
-    plt.legend()
-
-    # Use logarithmic scale on x axis
-    plt.xscale("log")
-
-    # Plot all areas and errors in one figure
-    plt.plot(errors, areas, "o")
-
-    if args.output is not None:
-        plt.savefig(args.output)
-    else:
-        plt.show()
+    # Save the dataframe to a CSV file
+    df.to_csv(os.path.join(args.output_dir, "metadata.csv"), index=False)
+    print("Saved metadata to CSV file.")
 
 
 if __name__ == "__main__":
