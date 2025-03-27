@@ -6,11 +6,11 @@ if [ -z "$1" ]; then
 fi
 
 n_runs="$1"
-tau_values=(0.10 0.18 0.32 0.58 1.05 1.90 3.42 6.17 11.11 20.00)
+tau_values=(30 34 38 42 46 50 54 58 62 66)
 
 # Loop over each tau and run the command n_runs times
 for tau in "${tau_values[@]}"; do
     for (( run=1; run<=n_runs; run++ )); do
-        python main.py -f generated/u_arrmul4.cgp -c area -p 10 -e 5000 -m 0.03 -t "$tau" -d cpu --log "logs/area_${tau}"
+        python main.py -f generated/u_arrmul4.cgp -c error -p 10 -e 5000 -m 0.03 -t "$tau" -d cpu --log "logs/error_${tau}" --pretrain 5000
     done
 done
