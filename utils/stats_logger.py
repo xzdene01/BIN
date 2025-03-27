@@ -12,8 +12,9 @@
 
 import os
 import json
-from datetime import datetime
+import pandas as pd
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 class StatsLogger:
     def __init__(self, criterion, tau, args, folder=None):
@@ -58,7 +59,7 @@ class StatsLogger:
 
         plt.figure()
 
-        # Plot pretran
+        # Plot pretrain
         if len_pretrain > 0:
             plt.plot(
                 self.errors[:len_pretrain],
@@ -71,7 +72,7 @@ class StatsLogger:
                 color="orange", marker="", linestyle="--"
             )
         
-        # Plot train
+        # Plot normal
         if len_finetune == 0:
             plt.plot(
                 self.errors[len_pretrain:],
@@ -214,13 +215,14 @@ class StatsLogger:
     def save_logs(self, cgp: str = None):
         os.makedirs(self.log_dir, exist_ok=True)
 
-        with open(os.path.join(self.log_dir, "areas.txt"), "w") as f:
-            for i, area in zip(self.iterations, self.areas):
-                f.write(f"{i},{area}\n")
-        
-        with open(os.path.join(self.log_dir, "errors.txt"), "w") as f:
-            for i, error in zip(self.iterations, self.errors):
-                f.write(f"{i},{error}\n")
+        # save iterations, areas, errors as csv
+        df = pd.DataFrame({
+            "iteration": self.iterations,
+            "area": self.areas,
+            "error": self.errors,
+            "flag": self.flags
+        })
+        df.to_csv(os.path.join(self.log_dir, "log.csv"), index=False)
         
         self.metadata["best_area"] = self.areas[-1]
         self.metadata["best_error"] = self.errors[-1]

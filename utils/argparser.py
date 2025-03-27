@@ -29,4 +29,5 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("-d", "--device", type=str, choices=["cpu", "cuda"], default=None, help="The device to use during inference (if not provided cuda will be tried).")
 
     parser.add_argument("--log", type=str, default=None, help="Folder to where store logs (default: None).")
+    parser.add_argument("--step", type=int, default=20, help="How often to log stats (default: 20).")
     return parser.parse_args()

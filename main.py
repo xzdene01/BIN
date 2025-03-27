@@ -15,7 +15,7 @@ from circuit.cgp_circuit import CGPCircuit
 from utils import argparser
 from utils.maybe_tqdm import maybe_tqdm
 from genetic.core import Population
-from logger.stats_logger import StatsLogger
+from utils.stats_logger import StatsLogger
 
 
 def main():
@@ -51,9 +51,9 @@ def main():
     
     pretrain_count = 0
     if args.pretrain:
-        #################################
-        # Pretrain to at east match tau #
-        #################################
+        ##################################
+        # Pretrain to at least match tau #
+        ##################################
 
         # Init new population with secondary criterion
         population = Population(args.population,
@@ -80,7 +80,8 @@ def main():
                 print("Best area:", best.area, ", Best error:", best.error, ", Best fitness:", best.fitness)
             
             # Log the best area and error
-            logger.log(i, best.area, best.error, flag="pretrain")
+            if i % args.step == 0 or i == args.pretrain - 1:
+                logger.log(i, best.area, best.error, flag="pretrain")
             pretrain_count += 1
 
             if best.fitness <= args.tau:
@@ -124,7 +125,8 @@ def main():
             print("Best area:", best.area, ", Best error:", best.error, ", Best fitness:", best.fitness)
 
         # Log the best area and error
-        logger.log(pretrain_count + i, best.area, best.error, flag="normal")
+        if i % args.step == 0 or i == args.epochs - 1:
+            logger.log(pretrain_count + i, best.area, best.error, flag="normal")
 
         # Init new population for next epoch
         # !!! This will use the best individual and mutate the new population
@@ -164,7 +166,8 @@ def main():
                 print("Best area:", best.area, ", Best error:", best.error, ", Best fitness:", best.fitness)
             
             # Log the best area and error
-            logger.log(pretrain_count + args.epochs + i, best.area, best.error, flag="finetune")
+            if i % args.step == 0 or i == args.finetune - 1:
+                logger.log(pretrain_count + args.epochs + i, best.area, best.error, flag="finetune")
 
             # Init new population for next epoch
             # !!! This will use the best individual and mutate the new population
