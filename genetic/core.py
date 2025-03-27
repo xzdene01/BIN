@@ -19,6 +19,7 @@ import copy
 from circuit.cgp_circuit import CGPCircuit, opcode_to_str
 from utils import generator
 from utils.maybe_tqdm import maybe_tqdm
+from utils.convert import binary_tensor_to_uint
 from .mappings import fitness_functions
 
 
@@ -88,6 +89,9 @@ class Population:
         self.areas = torch.empty(size, device=self.device)
         self.errors = torch.empty(size, device=self.device)
         self.fitnesses = torch.empty(size, device=self.device)
+
+        # Pre-compute weights for conversion between binary and integer representations of outputs
+        self.weights_out = 2 ** torch.arange(parent.prefix["c_out"] - 1, -1, -1, device=self.device, dtype=torch.long)
 
     def populate(self, parent: CGPCircuit = None, do_mut: bool = True):
         """
@@ -209,20 +213,19 @@ class Population:
         :return: The error of the individual
         """
         in_bits = int(self.c_in / self.c_ni)
-        total_bits = (2 ** self.c_in) * self.c_in
+        total_error = 0.0
 
-        cum_hamm = 0
         for in1, in2, ref in generator.generate_all_vec(in_bits, self.batch_size, device=self.device):
             batch_input = torch.cat((in1, in2), dim=1).to(self.device)
             batch_output = individual.forward_batch(batch_input, device=self.device)
 
-            out_flat = batch_output.flatten()
-            ref_flat = ref.flatten()
+            output_int = (batch_output.long() * self.weights_out).sum(dim=1)
+            ref_int = (ref.long() * self.weights_out).sum(dim=1)
 
-            cum_hamm += torch.sum(out_flat ^ ref_flat).item()
+            total_error += torch.abs(output_int - ref_int).sum().item()
 
-        avg_error = (cum_hamm / total_bits) * 100
-        return avg_error
+        total_samples = 2 ** self.c_in
+        return total_error / total_samples
 
     def calc_fitnesses_vec(self) -> torch.Tensor:
         """
@@ -248,38 +251,42 @@ class Population:
 
     def get_error_vec(self, individuals: list[CGPCircuit] = None) -> torch.Tensor:
         """
-        Get the error of the individuals in the population using vectorized operations.
+        Get the error of many individuals (or whole population) at once.
 
-        :param individuals: The individuals to get the error for (if None, the whole population is used)
-        :return: The errors of the individuals
+        :param individuals: List of individuals to get the error for (if None, the whole population is used)
+        :return: Errors of selected individuals
         """
         if not individuals:
             individuals = self.population
 
-        N = len(individuals)
+        num_ind = len(individuals)
         in_bits = int(self.c_in / self.c_ni)
-        total_bits = (2 ** self.c_in) * self.c_in
+        total_errors = torch.zeros(num_ind, device=self.device)
 
-        errors = torch.zeros(N, device=self.device)
         for in1, in2, ref in generator.generate_all_vec(in_bits, self.batch_size, device=self.device):
+            # shape [in1, in2]: (batch_size, c_in / c_ni)
+            # shape [ref]: (batch_size, c_out)
+
             # shape: (batch_size, c_in)
-            batch_input = torch.cat((in1, in2), dim=1).to(self.device)
+            batch_inputs = torch.cat((in1, in2), dim=1)
 
             # shape: (N, batch_size, c_out)
-            batch_outputs = torch.stack([ind.forward_batch(batch_input, device=self.device) for ind in individuals])
+            batch_outputs = torch.stack([ind.forward_batch(batch_inputs, device=self.device) for ind in individuals])
 
-            # shape: (N, batch_size * c_out)
-            # (N, batch_size, c_out) -> (N, batch_size * c_out)
-            out_flat = batch_outputs.flatten(start_dim=1)
+            # shape: (N, batch_size)
+            outputs_int = (batch_outputs.long() * self.weights_out).sum(dim=2)
 
-            # shape: (N, batch_size * c_out)
-            # (batch_size, c_out) -> (batch_size * c_out) -> (1, batch_size * c_out) -> (N, batch_size * c_out)
-            ref_flat = ref.flatten().unsqueeze(0).expand(N, -1)
+            # shape: (batch_size)
+            ref_int = (ref.long() * self.weights_out).sum(dim=1)
 
-            errors += torch.sum(out_flat ^ ref_flat, dim=1).float()
+            # shape: (N, batch_size)
+            batch_errors = torch.abs(outputs_int - ref_int.unsqueeze(0))
 
-        avg_errors = (errors / total_bits) * 100
-        return avg_errors
+            # shape: (N)
+            total_errors += batch_errors.sum(dim=1)
+
+        total_samples = 2 ** self.c_in
+        return total_errors / total_samples
 
     def get_best(self) -> Individual:
         """

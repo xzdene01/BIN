@@ -37,49 +37,87 @@ class StatsLogger:
         self.iterations = []
         self.areas = []
         self.errors = []
-
-        self.iterations_finetune = []
-        self.areas_finetune = []
-        self.errors_finetune = []
+        self.flags = []
 
         if not folder:
             folder = "logs"
         self.log_dir = f"{folder}/log_{datetime.now().strftime("%Y%m%d_%H%M%S")}"
 
-    def log(self, iteration, area, error, finetune=False):
-        if finetune:
-            self.iterations_finetune.append(iteration + len(self.iterations))
-            self.areas_finetune.append(area)
-            self.errors_finetune.append(error)
-        else:
-            self.iterations.append(iteration)
-            self.areas.append(area)
-            self.errors.append(error)
+    def log(self, iteration, area, error, flag):
+        self.iterations.append(iteration)
+        self.areas.append(area)
+        self.errors.append(error)
+
+        if flag not in ["pretrain", "normal", "finetune"]:
+            raise ValueError(f"Invalid flag: {flag}, must be one of ['pretrain', 'normal', 'finetune']")
+        self.flags.append(flag)
     
     def plot_scatter(self, save=False):
+        len_pretrain = len([flag for flag in self.flags if flag == "pretrain"])
+        len_finetune = len([flag for flag in self.flags if flag == "finetune"])
+
         plt.figure()
 
-        plt.plot(self.errors, self.areas, color='blue', marker='', linestyle='-', label="Train")
-
-        if len(self.areas_finetune) > 0:
-            plt.plot(self.errors_finetune, self.areas_finetune, color='lightblue', marker='', linestyle='-', label="Finetune")
+        # Plot pretran
+        if len_pretrain > 0:
             plt.plot(
-                [self.errors[-1], self.errors_finetune[0]],
-                [self.areas[-1], self.areas_finetune[0]],
-                color='lightblue', linestyle='-',
+                self.errors[:len_pretrain],
+                self.areas[:len_pretrain],
+                color="orange", marker="", linestyle="--", label="Pretrain"
             )
-            plt.plot(self.errors_finetune[-1], self.areas_finetune[-1], color='green', marker='o', label="Final")
+            plt.plot(
+                [self.errors[len_pretrain-1], self.errors[len_pretrain]],
+                [self.areas[len_pretrain-1], self.areas[len_pretrain]],
+                color="orange", marker="", linestyle="--"
+            )
+        
+        # Plot train
+        if len_finetune == 0:
+            plt.plot(
+                self.errors[len_pretrain:],
+                self.areas[len_pretrain:],
+                color="blue", marker="", linestyle="-", label="Train"
+            )
         else:
-            plt.plot(self.errors[-1], self.areas[-1], color='green', marker='o', label="Final")
+            plt.plot(
+                self.errors[len_pretrain:-len_finetune],
+                self.areas[len_pretrain:-len_finetune],
+                color="blue", marker="", linestyle="-", label="Train"
+            )
 
+        # Plot finetune
+        if len_finetune > 0:
+            plt.plot(
+                self.errors[-len_finetune:],
+                self.areas[-len_finetune:],
+                color="gray", marker="", linestyle="--", label="Finetune"
+            )
+            plt.plot(
+                [self.errors[-len_finetune-1], self.errors[-len_finetune]],
+                [self.areas[-len_finetune-1], self.areas[-len_finetune]],
+                color="gray", marker="", linestyle="--"
+            )
+        
+        # Show end point
+        plt.plot(
+            self.errors[-1],
+            self.areas[-1],
+            color="blue", marker="o", linestyle=""
+        )
+
+        # Plot bounds
         if self.criterion == "area":
             plt.axvline(x=self.tau, color='r', linestyle='--', label=f"Error bound")
+        else:
+            plt.axhline(y=self.tau, color='r', linestyle='--', label=f"Area bound")
         
         plt.xlabel("Error")
         plt.ylabel("Area")
         plt.title("Area vs Error")
         plt.legend()
         plt.grid(True)
+
+        plt.xscale("log")
 
         if save:
             os.makedirs(self.log_dir, exist_ok=True)
@@ -91,45 +129,78 @@ class StatsLogger:
                 print("Cannot show plot. Save it instead with --log flag.")
 
     def plot(self, save=False):
+        len_pretrain = len([flag for flag in self.flags if flag == "pretrain"])
+        len_finetune = len([flag for flag in self.flags if flag == "finetune"])
+
         plt.figure()
 
-        # Areas
+        #########
+        # Areas #
+        #########
+
         plt.subplot(3, 1, 1)
-        plt.plot(self.iterations, self.areas, color='blue', marker='', linestyle='-', label="Areas")
-        if len(self.areas_finetune) > 0:
-            plt.plot(self.iterations_finetune, self.areas_finetune, color='lightblue', marker='', linestyle='-', label="Areas Finetune")
-            plt.plot(
-                [self.iterations[-1], self.iterations_finetune[0]],
-                [self.areas[-1], self.areas_finetune[0]],
-                color='lightblue', linestyle='-',
-            )
-            plt.plot(self.iterations_finetune[-1], self.areas_finetune[-1], color='green', marker='o', label="Final")
+
+        # Pretrain
+        if len_pretrain > 0:
+            plt.plot(self.iterations[:len_pretrain], self.areas[:len_pretrain], color='orange', marker='', linestyle='--', label="Pretrain")
+        
+        # Train
+        if len_finetune == 0:
+            plt.plot(self.iterations[len_pretrain:], self.areas[len_pretrain:], color='blue', marker='', linestyle='-', label="Train")
         else:
-            plt.plot(self.iterations[-1], self.areas[-1], color='green', marker='o', label="Final")
+            plt.plot(self.iterations[len_pretrain:-len_finetune], self.areas[len_pretrain:-len_finetune], color='blue', marker='', linestyle='-', label="Train")
+        
+        # Finetune
+        if len_finetune > 0:
+            plt.plot(self.iterations[-len_finetune:], self.areas[-len_finetune:], color='gray', marker='', linestyle='--', label="Finetune")
+        
+        # Show end point
+        plt.plot(self.iterations[-1], self.areas[-1], color='blue', marker='o', linestyle='')
+
+        # Show bounds
+        if self.criterion == "error":
+            plt.axhline(y=self.tau, color='r', linestyle='--', label=f"Area bound")
+        
         plt.xlabel("Iterations")
         plt.ylabel("Area")
         plt.title("Areas")
         plt.legend()
         plt.grid(True)
+        
+        ##########
+        # Errors #
+        ##########
 
-        # Errors
         plt.subplot(3, 1, 3)
-        plt.plot(self.iterations, self.errors, color='red', marker='', linestyle='-', label="Errors")
-        if len(self.errors_finetune) > 0:
-            plt.plot(self.iterations_finetune, self.errors_finetune, color='lightcoral', marker='', linestyle='-', label="Errors Finetune")
-            plt.plot(
-                [self.iterations[-1], self.iterations_finetune[0]],
-                [self.errors[-1], self.errors_finetune[0]],
-                color='lightcoral', linestyle='-',
-            )
-            plt.plot(self.iterations_finetune[-1], self.errors_finetune[-1], color='green', marker='o', label="Final")
+
+        # Pretrain
+        if len_pretrain > 0:
+            plt.plot(self.iterations[:len_pretrain], self.errors[:len_pretrain], color='orange', marker='', linestyle='--', label="Pretrain")
+        
+        # Train
+        if len_finetune == 0:
+            plt.plot(self.iterations[len_pretrain:], self.errors[len_pretrain:], color='blue', marker='', linestyle='-', label="Train")
         else:
-            plt.plot(self.iterations[-1], self.errors[-1], color='green', marker='o', label="Final")
+            plt.plot(self.iterations[len_pretrain:-len_finetune], self.errors[len_pretrain:-len_finetune], color='blue', marker='', linestyle='-', label="Train")
+        
+        # Finetune
+        if len_finetune > 0:
+            plt.plot(self.iterations[-len_finetune:], self.errors[-len_finetune:], color='gray', marker='', linestyle='--', label="Finetune")
+        
+        # Show end point
+        plt.plot(self.iterations[-1], self.errors[-1], color='blue', marker='o', linestyle='')
+        
+        # Show bounds
+        if self.criterion == "area":
+            plt.axhline(y=self.tau, color='r', linestyle='--', label=f"Error bound")
+
         plt.xlabel("Iterations")
         plt.ylabel("Error")
         plt.title("Errors")
         plt.legend()
         plt.grid(True)
+
+        plt.yscale("log")
 
         if save:
             os.makedirs(self.log_dir, exist_ok=True)
@@ -146,17 +217,13 @@ class StatsLogger:
         with open(os.path.join(self.log_dir, "areas.txt"), "w") as f:
             for i, area in zip(self.iterations, self.areas):
                 f.write(f"{i},{area}\n")
-            for i, area in zip(self.iterations_finetune, self.areas_finetune):
-                f.write(f"{i},{area}\n")
         
         with open(os.path.join(self.log_dir, "errors.txt"), "w") as f:
             for i, error in zip(self.iterations, self.errors):
                 f.write(f"{i},{error}\n")
-            for i, error in zip(self.iterations_finetune, self.errors_finetune):
-                f.write(f"{i},{error}\n")
         
-        self.metadata["best_area"] = self.areas[-1] if len(self.areas_finetune) == 0 else self.areas_finetune[-1]
-        self.metadata["best_error"] = self.errors[-1] if len(self.errors_finetune) == 0 else self.errors_finetune[-1]
+        self.metadata["best_area"] = self.areas[-1]
+        self.metadata["best_error"] = self.errors[-1]
         with open(os.path.join(self.log_dir, "metadata.json"), "w") as f:
             f.write(json.dumps(self.metadata, indent=4))
         

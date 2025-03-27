@@ -20,6 +20,7 @@ from logger.stats_logger import StatsLogger
 
 def main():
     args = argparser.parse_args()
+    logger = StatsLogger(args.criterion, args.tau, args, args.log)
 
     device = args.device
     if not device:
@@ -46,6 +47,55 @@ def main():
     # If num epochs > 20 use tqdm on epoch level, else use tqdm on inference level
     inf_tqdm = True if args.epochs <= 20 else False
 
+    second_criterion = "error" if args.criterion == "area" else "area"
+    
+    pretrain_count = 0
+    if args.pretrain:
+        #################################
+        # Pretrain to at east match tau #
+        #################################
+
+        # Init new population with secondary criterion
+        population = Population(args.population,
+                                args.mutation_rate,
+                                second_criterion,
+                                float("inf"), # Just get area? to reqired
+                                cgp,
+                                batch_size,
+                                do_mut=True,
+                                device=device,
+                                use_tqdm=inf_tqdm)
+        best = None
+        for i in maybe_tqdm(range(args.pretrain), use_tqdm=not inf_tqdm, desc="Pretraining", unit="epoch"):
+            if inf_tqdm:
+                print("=========================================")
+                print(f"Pretrain {i + 1}/{args.finetune}")
+
+            # Recalculate fitnesses of the whole population
+            population.calc_fitnesses_vec()
+
+            # Get best individual from population and print stats
+            best = population.get_best()
+            if inf_tqdm:
+                print("Best area:", best.area, ", Best error:", best.error, ", Best fitness:", best.fitness)
+            
+            # Log the best area and error
+            logger.log(i, best.area, best.error, flag="pretrain")
+            pretrain_count += 1
+
+            if best.fitness <= args.tau:
+                cgp = best.cgp
+                break
+
+            # Init new population for next epoch
+            # !!! This will use the best individual and mutate the new population
+            population.populate()
+        else:
+            print("=========================================")
+            print("Pretraining failed!")
+            print("=========================================")
+            return
+
     # Get initial population from input CGP
     population = Population(args.population,
                             args.mutation_rate,
@@ -55,8 +105,6 @@ def main():
                             device=device,
                             use_tqdm=inf_tqdm)
     best = None
-
-    logger = StatsLogger(args.criterion, args.tau, args, args.log)
 
     #################
     # Run evolution #
@@ -76,7 +124,7 @@ def main():
             print("Best area:", best.area, ", Best error:", best.error, ", Best fitness:", best.fitness)
 
         # Log the best area and error
-        logger.log(i, best.area, best.error)
+        logger.log(pretrain_count + i, best.area, best.error, flag="normal")
 
         # Init new population for next epoch
         # !!! This will use the best individual and mutate the new population
@@ -88,13 +136,12 @@ def main():
         ####################################
 
         # Switch criterion and set current best as boundary
-        criterion = "error" if args.criterion == "area" else "area"
-        tau = best.area if criterion == "error" else best.error
+        tau = best.area if args.criterion == "area" else best.error
 
         # Init new population with secondary criterion
         population = Population(args.population,
                                 args.mutation_rate,
-                                criterion,
+                                second_criterion,
                                 tau,
                                 best.cgp,
                                 batch_size,
@@ -117,7 +164,7 @@ def main():
                 print("Best area:", best.area, ", Best error:", best.error, ", Best fitness:", best.fitness)
             
             # Log the best area and error
-            logger.log(i, best.area, best.error, finetune=True)
+            logger.log(pretrain_count + args.epochs + i, best.area, best.error, flag="finetune")
 
             # Init new population for next epoch
             # !!! This will use the best individual and mutate the new population
