@@ -60,7 +60,7 @@ def main():
         df = pd.concat([df, new_row], ignore_index=True)
 
     # Save the dataframe to a CSV file
-    df.to_csv(os.path.join(args.output_dir, "metadata.csv"), index=False)
+    df.to_csv(os.path.join(args.output_dir, "logs.csv"), index=False)
     print("Saved metadata to CSV file.")
 
 

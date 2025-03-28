@@ -12,52 +12,22 @@
 import argparse
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
+
+from helpers import get_trend_exp, get_trend_poly, set_log_ticks
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Collect and plot stats from CGP circuit optimizations.")
     parser.add_argument("-s", "--source_file", type=str, required=True, help="The file to load the stats from.")
     parser.add_argument("-o", "--output_file", type=str, default=None, help="The file to save the plot to.")
-    parser.add_argument("-c", "--criterion", type=str, required=True, help="The criterion to use for the plot.")
     return parser.parse_args()
 
 
-def neg_exp_offset(x, a, b, c):
-    return c + a * np.exp(-b * x)
-
-
-def get_trend_exp(x_series, y_series, num_points=200):
-    x_data = x_series.to_numpy()
-    y_data = y_series.to_numpy()
-
-    # Initial guess for the parameters
-    a_guess = y_data[0] - y_data[-1]
-    b_guess = 1.0
-    c_guess = y_data[-1]
-    initial_guess = [a_guess, b_guess, c_guess]
-
-    # Fit the function to the data
-    popt, _ = curve_fit(neg_exp_offset, x_data, y_data, p0=initial_guess)
-    a_fit, b_fit, c_fit = popt
-
-    # Create a smooth range of x-values for the fitted curve
-    xs = np.linspace(x_data.min(), x_data.max(), num_points)
-    ys = neg_exp_offset(xs, a_fit, b_fit, c_fit)
-    
-    return xs, ys, (a_fit, b_fit, c_fit)
-
-
-def main():
-    args = parse_args()
-
-    df = pd.read_csv(args.source_file)
-    df = df.query("criterion == @args.criterion")
-
+def plot_queue(df: pd.DataFrame, ax: plt.Axes):
     areas_df = df["best_area"]
     errors_df = df["best_error"]
-
-    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
 
     # Plot taus
     criterion = df["criterion"].iloc[0]
@@ -72,10 +42,10 @@ def main():
             ax.axhline(y=tau, color=tau_color, linestyle="--")
 
     # Plot best individuals
-    ax.plot(errors_df, areas_df, color="black", marker="x", linestyle="", label="Areas")
+    sns.scatterplot(data=df, x="best_error", y="best_area", style="tau", hue="tau", palette="tab10", ax=ax, s=100, legend="full")
 
     # Connect best individuals from each tau
-    extrems_color = "blue"# (0, 1, 1, 0.5)
+    extrems_color = (0, 0, 1, 0.5)
     best_from_taus = []
     worst_from_taus = []
     for tau in taus:
@@ -87,20 +57,47 @@ def main():
     ax.plot([best[0] for best in best_from_taus], [best[1] for best in best_from_taus], color=extrems_color, marker="", linestyle="--", label="Extremes from each tau")
     ax.plot([worst[0] for worst in worst_from_taus], [worst[1] for worst in worst_from_taus], color=extrems_color, marker="", linestyle="--")
 
-    # Plot trend line with seaborn
+    # Plot trend line
     trend_color = (0, 0, 0, 0.3)
-    xs, ys, params = get_trend_exp(errors_df, areas_df)
-    ax.plot(xs, ys, color=trend_color, linestyle="-", linewidth=20, label=f"Trend line ({params[0]:.3f} * exp(-{params[1]:.3f} * x) + {params[2]:.3f})")
+    if criterion == "area":
+        fn, params = get_trend_exp(errors_df, areas_df)
+        xs = np.linspace(errors_df.min(), errors_df.max(), num=200)
+        ys = fn(xs)
+        ax.plot(xs, ys, color=trend_color, linestyle="-", linewidth=20, label=f"Trend line ({params[0]:.3f} * exp(-{params[1]:.3f} * x) + {params[2]:.3f})")
+    else:
+        fn, params = get_trend_poly(errors_df, areas_df, degree=2)
+        coefs = [float(coef) for coef in params[0]]
+        coefs_str = ", ".join([f"{coef:.3f}" for coef in coefs])
+        xs = np.linspace(errors_df.min(), errors_df.max(), num=200)
+        ys = fn(xs)
+        ax.plot(xs, ys, color=trend_color, linestyle="-", linewidth=20, label=f"Trend line (coefs: {coefs_str}, intercept: {params[1]:.3f})")
     
-
-    # Set errors to log scale
-    ax.set_xscale("log")
-
     ax.set_xlabel("Errors")
     ax.set_ylabel("Areas")
-    ax.set_title("Areas vs Errors")
     ax.legend()
     ax.grid(True)
+
+    ax.set_xscale("log")
+    set_log_ticks(ax, 10)
+
+    if criterion == "area":
+        ax.set_title("Area optimization method")
+    else:
+        ax.set_title("Error optimization method")
+    ax.grid(False)
+
+
+def main():
+    args = parse_args()
+
+    df = pd.read_csv(args.source_file)
+    df_area = df.query("criterion == 'area'")
+    df_error = df.query("criterion == 'error'")
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 5))
+
+    plot_queue(df_area, ax1)
+    plot_queue(df_error, ax2)
 
     fig.tight_layout()
 
