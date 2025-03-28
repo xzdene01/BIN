@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 from scipy.optimize import curve_fit
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
@@ -44,11 +45,20 @@ def get_trend_poly(x_series: pd.Series, y_series: pd.Series, degree: int = 2) ->
     return lambda x: pipeline.predict(x.reshape(-1, 1)), (coef, intercept)
 
 
-def set_log_ticks(ax: plt.Axes, num_ticks: int):
-    xmin, xmax = ax.get_xlim()
+def set_log_ticks(ax: plt.Axes, num_ticks: int, axis: str = "x"):
+    if axis == "x":
+        min, max = ax.get_xlim()
+    else:
+        min, max = ax.get_ylim()
 
-    log_ticks = np.linspace(np.log10(xmin), np.log10(xmax), 10)
+    log_ticks = np.linspace(np.log10(min), np.log10(max), num_ticks)
     ticks = 10 ** log_ticks
 
-    ax.set_xticks(ticks)
-    ax.get_xaxis().set_major_formatter(plt.ScalarFormatter())
+    if axis == "x":
+        ax.xaxis.set_minor_locator(ticker.NullLocator())
+        ax.set_xticks(ticks)
+        ax.get_xaxis().set_major_formatter(plt.ScalarFormatter())
+    else:
+        ax.yaxis.set_minor_locator(ticker.NullLocator())
+        ax.set_yticks(ticks)
+        ax.get_yaxis().set_major_formatter(plt.ScalarFormatter())

@@ -16,6 +16,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
 
+from stats.helpers import set_log_ticks
+
 class StatsLogger:
     def __init__(self, criterion, tau, args, folder=None):
         self.criterion = criterion
@@ -64,12 +66,12 @@ class StatsLogger:
             plt.plot(
                 self.errors[:len_pretrain],
                 self.areas[:len_pretrain],
-                color="orange", marker="", linestyle="--", label="Pretrain"
+                color="orange", marker="", linestyle="--", label="Pretrain", linewidth=2
             )
             plt.plot(
                 [self.errors[len_pretrain-1], self.errors[len_pretrain]],
                 [self.areas[len_pretrain-1], self.areas[len_pretrain]],
-                color="orange", marker="", linestyle="--"
+                color="orange", marker="", linestyle="--", linewidth=2
             )
         
         # Plot normal
@@ -77,13 +79,13 @@ class StatsLogger:
             plt.plot(
                 self.errors[len_pretrain:],
                 self.areas[len_pretrain:],
-                color="blue", marker="", linestyle="-", label="Train"
+                color="blue", marker="", linestyle="-", label="Train", linewidth=2
             )
         else:
             plt.plot(
                 self.errors[len_pretrain:-len_finetune],
                 self.areas[len_pretrain:-len_finetune],
-                color="blue", marker="", linestyle="-", label="Train"
+                color="blue", marker="", linestyle="-", label="Train", linewidth=2
             )
 
         # Plot finetune
@@ -91,19 +93,19 @@ class StatsLogger:
             plt.plot(
                 self.errors[-len_finetune:],
                 self.areas[-len_finetune:],
-                color="gray", marker="", linestyle="--", label="Finetune"
+                color="gray", marker="", linestyle="--", label="Finetune", linewidth=2
             )
             plt.plot(
                 [self.errors[-len_finetune-1], self.errors[-len_finetune]],
                 [self.areas[-len_finetune-1], self.areas[-len_finetune]],
-                color="gray", marker="", linestyle="--"
+                color="gray", marker="", linestyle="--", linewidth=2
             )
         
         # Show end point
         plt.plot(
             self.errors[-1],
             self.areas[-1],
-            color="blue", marker="o", linestyle=""
+            color="green", marker="o", linestyle=""
         )
 
         # Plot bounds
@@ -119,6 +121,8 @@ class StatsLogger:
         plt.grid(True)
 
         plt.xscale("log")
+        ax = plt.gca()
+        set_log_ticks(ax, 10, axis="x")
 
         if save:
             os.makedirs(self.log_dir, exist_ok=True)
@@ -143,20 +147,20 @@ class StatsLogger:
 
         # Pretrain
         if len_pretrain > 0:
-            plt.plot(self.iterations[:len_pretrain], self.areas[:len_pretrain], color='orange', marker='', linestyle='--', label="Pretrain")
+            plt.plot(self.iterations[:len_pretrain], self.areas[:len_pretrain], color='orange', marker='', linestyle='--', label="Pretrain", linewidth=2)
         
         # Train
         if len_finetune == 0:
-            plt.plot(self.iterations[len_pretrain:], self.areas[len_pretrain:], color='blue', marker='', linestyle='-', label="Train")
+            plt.plot(self.iterations[len_pretrain:], self.areas[len_pretrain:], color='blue', marker='', linestyle='-', label="Train", linewidth=2)
         else:
-            plt.plot(self.iterations[len_pretrain:-len_finetune], self.areas[len_pretrain:-len_finetune], color='blue', marker='', linestyle='-', label="Train")
+            plt.plot(self.iterations[len_pretrain:-len_finetune], self.areas[len_pretrain:-len_finetune], color='blue', marker='', linestyle='-', label="Train", linewidth=2)
         
         # Finetune
         if len_finetune > 0:
-            plt.plot(self.iterations[-len_finetune:], self.areas[-len_finetune:], color='gray', marker='', linestyle='--', label="Finetune")
+            plt.plot(self.iterations[-len_finetune:], self.areas[-len_finetune:], color='gray', marker='', linestyle='--', label="Finetune", linewidth=2)
         
         # Show end point
-        plt.plot(self.iterations[-1], self.areas[-1], color='blue', marker='o', linestyle='')
+        plt.plot(self.iterations[-1], self.areas[-1], color='green', marker='o', linestyle='')
 
         # Show bounds
         if self.criterion == "error":
@@ -176,20 +180,20 @@ class StatsLogger:
 
         # Pretrain
         if len_pretrain > 0:
-            plt.plot(self.iterations[:len_pretrain], self.errors[:len_pretrain], color='orange', marker='', linestyle='--', label="Pretrain")
+            plt.plot(self.iterations[:len_pretrain], self.errors[:len_pretrain], color='orange', marker='', linestyle='--', label="Pretrain", linewidth=2)
         
         # Train
         if len_finetune == 0:
-            plt.plot(self.iterations[len_pretrain:], self.errors[len_pretrain:], color='blue', marker='', linestyle='-', label="Train")
+            plt.plot(self.iterations[len_pretrain:], self.errors[len_pretrain:], color='blue', marker='', linestyle='-', label="Train", linewidth=2)
         else:
-            plt.plot(self.iterations[len_pretrain:-len_finetune], self.errors[len_pretrain:-len_finetune], color='blue', marker='', linestyle='-', label="Train")
+            plt.plot(self.iterations[len_pretrain:-len_finetune], self.errors[len_pretrain:-len_finetune], color='blue', marker='', linestyle='-', label="Train", linewidth=2)
         
         # Finetune
         if len_finetune > 0:
-            plt.plot(self.iterations[-len_finetune:], self.errors[-len_finetune:], color='gray', marker='', linestyle='--', label="Finetune")
+            plt.plot(self.iterations[-len_finetune:], self.errors[-len_finetune:], color='gray', marker='', linestyle='--', label="Finetune", linewidth=2)
         
         # Show end point
-        plt.plot(self.iterations[-1], self.errors[-1], color='blue', marker='o', linestyle='')
+        plt.plot(self.iterations[-1], self.errors[-1], color='green', marker='o', linestyle='')
         
         # Show bounds
         if self.criterion == "area":
@@ -202,6 +206,8 @@ class StatsLogger:
         plt.grid(True)
 
         plt.yscale("log")
+        ax = plt.gca()
+        set_log_ticks(ax, 3, axis="y")
 
         if save:
             os.makedirs(self.log_dir, exist_ok=True)
