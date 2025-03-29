@@ -45,7 +45,7 @@ def main():
     print("Active nodes:", len(cgp))
 
     # If num epochs > 20 use tqdm on epoch level, else use tqdm on inference level
-    inf_tqdm = True if args.epochs <= 20 else False
+    inf_tqdm = True if args.epochs <= 1 else False
 
     second_criterion = "error" if args.criterion == "area" else "area"
     
