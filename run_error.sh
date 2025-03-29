@@ -13,8 +13,8 @@ fi
 echo "Running area experiment with $1 runs and $2 epochs"
 
 # to not run the script by mistake with diff num of epochs than usual
-if [ "$2" -ne 2000 ]; then
-    echo "Warning: the number of epochs is not 2000"
+if [ "$2" -ne 5000 ]; then
+    echo "Warning: the number of epochs is not 5000"
     echo "Are you sure you want to continue? (y/n)"
     read -r response
     if [ "$response" != "y" ]; then
@@ -33,7 +33,7 @@ for tau in "${tau_values[@]}"; do
         # echo "================================="
         echo "Running $run/$n_runs for tau=$tau"
         # echo "================================="
-        python main.py -f generated/u_arrmul4.cgp -c error -p 10 -e $2 -m 0.03 -t "$tau" -d cpu --log "logs/error_${tau}" --pretrain 5000 > /dev/null 2>&1
+        python main.py -f generated/u_arrmul4.cgp -c error -p 10 -e $2 -m 0.03 -t "$tau" -d cpu --log "logs_f/error_${tau}" --pretrain 5000 > /dev/null 2>&1
     done
     ) &
 done
