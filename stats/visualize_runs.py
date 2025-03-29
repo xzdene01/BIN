@@ -75,10 +75,6 @@ def main():
                        errorbar=("ci", args.confidence_interval), legend=False, color="blue")
     ax2 = sns.lineplot(data=interpolated_df, x="iteration", y="error", ax=ax2,label="Error",
                        errorbar=("ci", args.confidence_interval), legend=False, color="red")
-    
-    # !!! HARDCODED !!!
-    normal_training_start = ax2.get_xlim()[1] - 5000
-    # ax2.axvline(x=normal_training_start, color="black", linestyle="--", label="Normal training start")
 
     # Combine legends
     handles_ax1, labels_ax1 = ax1.get_legend_handles_labels()
