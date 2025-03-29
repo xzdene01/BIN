@@ -1,3 +1,14 @@
+"""
+@file   visualize_corel_i.py
+@brief  Visualize area VS erro method 1 log file and visually compare their results.
+@author Jan Zdeněk (xzdene01)
+@date   29/3/2025
+
+@project Aproximace násobiček pomocí CGP
+@course  BIN - Biologií inspirované počítače
+@faculty Faculty of Information Technology, Brno University of Technology
+"""
+
 import argparse
 import pandas as pd
 import numpy as np
@@ -56,37 +67,36 @@ def main():
     # SHOW THE CURVE FITS #
     #######################
 
-    x_pred_area = np.linspace(x_min, x_max, num=200)
-    y_pred_area = fit_area(x_pred_area)
-    
-    x_pred_error = np.linspace(x_min, x_max, num=200)
-    y_pred_error = fit_error(x_pred_error)
+    x_pred = np.linspace(x_min, x_max, num=200)
+    y_pred_area = fit_area(x_pred)
+    y_pred_error = fit_error(x_pred)
 
     ax1.scatter(x_area, y_area, label="Ground-truth", color="blue", marker="x")
-    ax1.plot(x_pred_area, y_pred_area, label="Prediction", color="blue")
+    ax1.plot(x_pred, y_pred_area, label="Prediction", color="blue")
     ax1.set_title("AREA vs. AREA (to show the curve fits)")
+    ax1.axvline(x=20, color="black", linestyle="--", label="Max tau error: 20%")
+    ax1.axhline(y=15, color="black", linestyle="--", label="Area: 15")
     ax1.legend()
 
+
     ax2.scatter(x_error, y_error, label="Ground-truth", color="red", marker="x")
-    ax2.plot(x_pred_error, y_pred_error, label="Prediction", color="red")
+    ax2.plot(x_pred, y_pred_error, label="Prediction", color="red")
     ax2.set_title("ERROR vs. ERROR (to show the curve fits)")
+    ax2.axvline(x=50, color="black", linestyle="--", label="Error: 50%")
+    ax2.axhline(y=20, color="black", linestyle="--", label="Min tau area: 20")
     ax2.legend()
 
     #######################################
     # COMPARE ACTUAL AND PREDICTED VALUES #
     #######################################
 
-    x_pred = np.linspace(x_min, x_max, num=200)
-    y_pred = fit_error(x_pred)
     ax3.scatter(x_area, y_area, label="Area method", color="blue", marker="x")
-    ax3.plot(x_pred, y_pred, label="Error method prediction", color="red")
+    ax3.plot(x_pred, y_pred_error, label="Error method prediction", color="red")
     ax3.set_title("AREA (actual) vs. ERROR (prediction)")
     ax3.legend()
 
-    x_pred = np.linspace(x_min, x_max, num=200)
-    y_pred = fit_area(x_pred)
     ax4.scatter(x_error, y_error, label="Error method", color="red", marker="x")
-    ax4.plot(x_pred, y_pred, label="Area method prediction", color="blue")
+    ax4.plot(x_pred, y_pred_area, label="Area method prediction", color="blue")
     ax4.set_title("ERROR (actual) vs. AREA (prediction)")
     ax4.legend()
 
@@ -94,18 +104,18 @@ def main():
     # COMPARE BOTH PREDICTIONS AND BOTH ACTUAL VALUES #
     ###################################################
 
-    x_pred = np.linspace(x_min, x_max, num=200)
-    y_pred_area = fit_area(x_pred)
-    y_pred_error = fit_error(x_pred)
-
     ax5.plot(x_pred, y_pred_area, label="Area method prediction", color="blue")
     ax5.plot(x_pred, y_pred_error, label="Error method prediction", color="red")
     ax5.set_title("AREA (prediction) vs. ERROR (prediction)")
+    ax5.axvline(x=50, color="black", linestyle="--", label="Error: 50%")
+    ax5.axhline(y=15, color="black", linestyle="--", label="Area: 15")
     ax5.legend()
 
     ax6.scatter(x_area, y_area, label="Area method", color="blue", marker="x")
     ax6.scatter(x_error, y_error, label="Error method", color="red", marker="x")
     ax6.set_title("AREA (actual) vs. ERROR (actual)")
+    ax6.axvline(x=20, color="black", linestyle="--", label="Max tau error: 20%")
+    ax6.axhline(y=20, color="black", linestyle="--", label="Min tau area: 20")
     ax6.legend()
 
     for ax in axs.flat:

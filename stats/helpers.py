@@ -1,3 +1,14 @@
+"""
+@file   heklpers.py
+@brief  Helper functions for the stats visualization scripts like fitting curves and setting log ticks on plots.
+@author Jan Zdeněk (xzdene01)
+@date   29/3/2025
+
+@project Aproximace násobiček pomocí CGP
+@course  BIN - Biologií inspirované počítače
+@faculty Faculty of Information Technology, Brno University of Technology
+"""
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -45,7 +56,7 @@ def get_trend_poly(x_series: pd.Series, y_series: pd.Series, degree: int = 2) ->
     return lambda x: pipeline.predict(x.reshape(-1, 1)), (coef, intercept)
 
 
-def set_log_ticks(ax: plt.Axes, num_ticks: int, axis: str = "x"):
+def set_log_ticks(ax: plt.Axes, num_ticks: int, axis: str = "x", decimals: int = 3):
     if axis == "x":
         min, max = ax.get_xlim()
     else:
@@ -57,8 +68,8 @@ def set_log_ticks(ax: plt.Axes, num_ticks: int, axis: str = "x"):
     if axis == "x":
         ax.xaxis.set_minor_locator(ticker.NullLocator())
         ax.set_xticks(ticks)
-        ax.get_xaxis().set_major_formatter(plt.ScalarFormatter())
+        ax.get_xaxis().set_major_formatter(plt.FormatStrFormatter(f"%.{decimals}f"))
     else:
         ax.yaxis.set_minor_locator(ticker.NullLocator())
         ax.set_yticks(ticks)
-        ax.get_yaxis().set_major_formatter(plt.ScalarFormatter())
+        ax.get_yaxis().set_major_formatter(plt.FormatStrFormatter(f"%.{decimals}f"))

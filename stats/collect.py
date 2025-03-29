@@ -16,7 +16,7 @@ import pandas as pd
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Collect and plot stats from CGP circuit optimizations.")
+    parser = argparse.ArgumentParser(description="Collect stats from CGP circuit optimizations logs.")
     parser.add_argument("-s", "--source_dir", type=str, required=True, help="The directory with the logs to collect stats from.")
     parser.add_argument("-o", "--output_dir", type=str, required=True, help="The directory to save the stats to.")
     return parser.parse_args()

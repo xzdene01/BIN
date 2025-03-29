@@ -5,6 +5,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 
+from helpers import set_log_ticks
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Collect and plot stats from CGP circuit optimizations.")
     parser.add_argument("-s", "--source_file", type=str, required=True, help="The file to load the stats from.")
@@ -36,9 +38,9 @@ def main():
         run_df = pd.read_csv(run)
         run_df["run_id"] = idx
         runs_df = pd.concat([runs_df, run_df])
-    
     runs_df = runs_df.sort_values(by=["run_id", "iteration"])
 
+    # runs_df = runs_df.query("flag == 'normal'")
     min_iter = max(1, runs_df["iteration"].min())
     max_iter = runs_df["iteration"].max()
     iters_selected = np.linspace(min_iter, max_iter, num=100)
@@ -65,7 +67,7 @@ def main():
         })
         interpolated.append(df_interpolated)
 
-    interpolated_df = pd.concat(interpolated)
+    interpolated_df = pd.concat(interpolated, ignore_index=True)
 
     _, ax1 = plt.subplots(figsize=(10, 5))
     ax2 = ax1.twinx()
@@ -73,6 +75,10 @@ def main():
                        errorbar=("ci", args.confidence_interval), legend=False, color="blue")
     ax2 = sns.lineplot(data=interpolated_df, x="iteration", y="error", ax=ax2,label="Error",
                        errorbar=("ci", args.confidence_interval), legend=False, color="red")
+    
+    # !!! HARDCODED !!!
+    normal_training_start = ax2.get_xlim()[1] - 5000
+    # ax2.axvline(x=normal_training_start, color="black", linestyle="--", label="Normal training start")
 
     # Combine legends
     handles_ax1, labels_ax1 = ax1.get_legend_handles_labels()
@@ -86,6 +92,9 @@ def main():
     ax1.set_xscale("log")
     ax2.set_xscale("log")
     ax2.set_yscale("log")
+
+    set_log_ticks(ax1, 10, axis="x", decimals=0)
+    set_log_ticks(ax2, 8, axis="y")
 
     plt.title(f"Tau: {tau}, confidence interval: {args.confidence_interval}%")
 
