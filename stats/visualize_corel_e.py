@@ -18,7 +18,7 @@ from helpers import get_trend_exp, get_trend_poly, set_log_ticks
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Collect and plot stats from CGP circuit optimizations.")
+    parser = argparse.ArgumentParser(description="Collect and plot stats from CGP circuit optimizations. Show correlation between two methods.")
     parser.add_argument("-s1", "--source_file1", type=str, required=True, help="The file to load the stats from.")
     parser.add_argument("-s2", "--source_file2", type=str, required=True, help="The file to load the stats from.")
     parser.add_argument("-c1", "--criterion1", type=str, required=True, help="The criterion to use for the plot.")

@@ -19,7 +19,6 @@ import copy
 from circuit.cgp_circuit import CGPCircuit, opcode_to_str
 from utils import generator
 from utils.maybe_tqdm import maybe_tqdm
-from utils.convert import binary_tensor_to_uint
 from .mappings import fitness_functions
 
 
@@ -57,7 +56,7 @@ class Population:
         :param size: The size of the population
         :param m_rate: The mutation rate
         :param criterion: The criterion to use for fitness calculation (area or error)
-        :param tau: The tau value for fitness calculation (max error/area)
+        :param tau: The tau value for fitness calculation (max error/max area)
         :param parent: The parent CGP circuit to use as a base
         :param batch_size: The batch size for vectorized operations
         :param do_mut: Whether to mutate the initial population
@@ -81,7 +80,7 @@ class Population:
         self.best_error = None
         self.best_fitness = None
 
-        # Create initial population and with mutation?
+        # Create initial population and mutate?
         self.population = []
         self.populate(self.best, do_mut=do_mut)
 
@@ -120,7 +119,7 @@ class Population:
 
         :param m_rate: The mutation rate to use (if None, the default mutation rate is used)
         """
-        # !!! Does not save the mutation rate into attribute, that must be done manualy
+        # !!! Does not save the mutation rate into attribute, that must be done manualy !!!
         if not m_rate:
             m_rate = self.m_rate
 
@@ -141,7 +140,7 @@ class Population:
                 weights = torch.ones(len(individual.outputs), device=self.device)
                 mutation_idxs = torch.multinomial(weights, num_mutations, replacement=False)
 
-            # If num of mutations is 0, we need to go stochastic
+            # If num of mutations is 0, we need to go one by one
             else:
                 mutation_idxs = []
                 for i in range(len(individual.outputs)):
@@ -237,7 +236,7 @@ class Population:
         self.errors = self.get_error_vec()
         self.fitnesses = fitness_functions[self.criterion](self.areas, self.errors, self.tau)
 
-        # !!! Current best must always be at index 0
+        # !!! Current best must always be at index 0 !!!
         b_val_all, _ = torch.min(self.fitnesses, dim=0)
         b_val_tail, b_idx_tail = torch.min(self.fitnesses[1:], dim=0)
         best_idx = 0 if b_val_all < b_val_tail else b_idx_tail + 1

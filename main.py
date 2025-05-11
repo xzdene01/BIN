@@ -44,8 +44,8 @@ def main():
     print(f"Criterion: {args.criterion}")
     print("Active nodes:", len(cgp))
 
-    # If num epochs > 20 use tqdm on epoch level, else use tqdm on inference level
-    inf_tqdm = True if args.epochs <= 1 else False
+    # If num epochs <= 5 use tqdm on epoch level, else use tqdm on inference level
+    inf_tqdm = True if args.epochs <= 5 else False
 
     second_criterion = "error" if args.criterion == "area" else "area"
     
@@ -59,7 +59,7 @@ def main():
         population = Population(args.population,
                                 args.mutation_rate,
                                 second_criterion,
-                                float("inf"), # Just get area? to reqired
+                                float("inf"), # Just get area to reqired tau
                                 cgp,
                                 batch_size,
                                 do_mut=True,
@@ -89,7 +89,7 @@ def main():
                 break
 
             # Init new population for next epoch
-            # !!! This will use the best individual and mutate the new population
+            # !!! This will use the best individual and mutate the new population !!!
             population.populate()
         else:
             print("=========================================")
@@ -129,7 +129,7 @@ def main():
             logger.log(pretrain_count + i, best.area, best.error, flag="normal")
 
         # Init new population for next epoch
-        # !!! This will use the best individual and mutate the new population
+        # !!! This will use the best individual and mutate the new population !!!
         population.populate()
     
     if args.finetune:
@@ -170,7 +170,7 @@ def main():
                 logger.log(pretrain_count + args.epochs + i, best.area, best.error, flag="finetune")
 
             # Init new population for next epoch
-            # !!! This will use the best individual and mutate the new population
+            # !!! This will use the best individual and mutate the new population !!!
             population.populate()
     
     print("=========================================")

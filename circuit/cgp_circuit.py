@@ -21,11 +21,13 @@ class Node:
     to operation.
     """
 
-    def __init__(self, core):
+    def __init__(self, core: tuple):
         """
-        Initialize a new node from core string.
+        Initialize a new node from core. Input format is tuple<str, str>, where the first element is the ID and
+        the second is string with inputs and operation code separated by commas.
+        E.g. ("0", "1,2,3") means that the node has node_id 0, input_id 1, input_id 2 and opcode_id 3.
 
-        :param core: Core string from CGP circuit
+        :param core: Core from CGP circuit string
         """
         self.id = int(core[0])
 
@@ -36,7 +38,7 @@ class Node:
 
     def __str__(self):
         """
-        Get string representation of this node.
+        Get string representation of this node. This is used for saving the CGP circuit to a file.
 
         :return: String representation of this node
         """
@@ -44,7 +46,7 @@ class Node:
 
     def get_str_human(self):
         """
-        Get a string representation of the node for printing to console (human readable).
+        Get a string representation of the node for printing to console (human readable). This is just a helper.
 
         :return: A string representation of the node
         """
@@ -67,7 +69,7 @@ class CGPCircuit:
 
     !!! This implementation supports only flat circuits with 2 inputs per node. !!!
     All nodes are processed sequentially - the order of nodes in the core list is important.
-    There are NO OPTIMIZATIONS for circuits with more rows - will work but slower.
+    There are NO OPTIMIZATIONS for circuits with more rows - should work but slower.
     """
 
     def __init__(self, cgp_string: str = None, file: str = None):

@@ -22,12 +22,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("-m", "--mutation_rate", type=float, default=0.03, help="Mutation rate to be used in evolution (default: 0.03).")
     parser.add_argument("-t", "--tau", type=float, default=10, help="Tau value (max error/area) to be used (default: 10).")
 
-    parser.add_argument("--pretrain", type=int, help="For how long to pretrain the initial population [use this for optimizing error] (default: None).")
-    parser.add_argument("--finetune", type=int, help="For how long to finetune the best individual found (default: None).")
+    parser.add_argument("--pretrain", type=int, help="For how long to pretrain the initial population [use this for optimizing error] (default: no pretraining).")
+    parser.add_argument("--finetune", type=int, help="For how long to finetune the best individual found (default: no finetuning).")
 
     parser.add_argument("-b", "--batch_size", type=int, default=16, help="The batch size used during generation and inference, will be converted to 2 ** batch_size (default: 16).")
-    parser.add_argument("-d", "--device", type=str, choices=["cpu", "cuda"], default=None, help="The device to use during inference (if not provided cuda will be tried).")
+    parser.add_argument("-d", "--device", type=str, choices=["cpu", "cuda"], default=None, help="The device to use during inference (default: try cuda).")
 
-    parser.add_argument("--log", type=str, default=None, help="Folder to where store logs (default: None).")
+    parser.add_argument("--log", type=str, default=None, help="Folder to where store logs (default: no logs).")
     parser.add_argument("--step", type=int, default=20, help="How often to log stats (default: 20).")
     return parser.parse_args()

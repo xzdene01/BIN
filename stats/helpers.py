@@ -1,5 +1,5 @@
 """
-@file   heklpers.py
+@file   helpers.py
 @brief  Helper functions for the stats visualization scripts like fitting curves and setting log ticks on plots.
 @author Jan Zdeněk (xzdene01)
 @date   29/3/2025

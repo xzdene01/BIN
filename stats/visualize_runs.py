@@ -1,3 +1,14 @@
+"""
+@file   visualize_runs.py
+@brief  Visualize the runs of CGP circuit optimizations over many runs with some confidence intervals.
+@author Jan Zdeněk (xzdene01)
+@date   27/3/2025
+
+@project Aproximace násobiček pomocí CGP
+@course  BIN - Biologií inspirované počítače
+@faculty Faculty of Information Technology, Brno University of Technology
+"""
+
 import argparse
 import numpy as np
 import seaborn as sns
@@ -8,7 +19,7 @@ from scipy.interpolate import interp1d
 from helpers import set_log_ticks
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Collect and plot stats from CGP circuit optimizations.")
+    parser = argparse.ArgumentParser(description="Collect and plot stats from CGP circuit optimizations. Show the evolution of the area and error with some confidence.")
     parser.add_argument("-s", "--source_file", type=str, required=True, help="The file to load the stats from.")
     parser.add_argument("-o", "--output_file", type=str, default=None, help="The file to save the plot to.")
     parser.add_argument("-c", "--criterion", type=str, required=True, help="The criterion to use for the plot.")

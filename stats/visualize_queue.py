@@ -19,7 +19,7 @@ from helpers import get_trend_exp, get_trend_poly, set_log_ticks
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Collect and plot stats from CGP circuit optimizations.")
+    parser = argparse.ArgumentParser(description="Collect and plot stats from CGP circuit optimizations. Show parreto queues for area and error with trend lines.")
     parser.add_argument("-s", "--source_file", type=str, required=True, help="The file to load the stats from.")
     parser.add_argument("-o", "--output_file", type=str, default=None, help="The file to save the plot to.")
     return parser.parse_args()
