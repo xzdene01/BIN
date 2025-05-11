@@ -26,6 +26,7 @@ Depending on your choice of primary criterion (`area` or `error`), the algorithm
 ## Requirements
 
 - Conda and Python installed
+- (optional for cuda compute) have Cuda installed (12.7) with all requirements
 
 ## Installation
 
