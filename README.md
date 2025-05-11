@@ -5,6 +5,7 @@
 - name: Jan Zdeněk
 - login: xzdene01
 - contact: <xzdene01@vutbr.cz>
+- GitHub: <https://github.com/xzdene01/BIN>
 - date: 11.5.2025
 
 ## Description
