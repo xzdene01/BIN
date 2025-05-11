@@ -97,6 +97,7 @@ def main():
     ax2.set_ylabel("Error")
 
     ax1.set_xscale("log")
+    ax1.set_yscale("log")
     ax2.set_xscale("log")
     ax2.set_yscale("log")
 
